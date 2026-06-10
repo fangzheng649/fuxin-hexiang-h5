@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>抚心合香 · H5 原型设计</title>
+<script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;600&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #E8E0D8;
+    font-family: 'Noto Sans SC', -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  .page-title {
+    text-align: center;
+    color: #5A4A3A;
+    font-family: 'Noto Serif SC', serif;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: 4px;
+  }
+  .page-subtitle {
+    text-align: center;
+    color: #8B7B6B;
+    font-size: 14px;
+    margin-bottom: 40px;
+    letter-spacing: 1px;
+  }
+  .phones-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 48px;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 2600px;
+    margin: 0 auto;
+  }
+  .phone-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .phone-label {
+    font-size: 13px;
+    color: #8B7B6B;
+    margin-bottom: 12px;
+    font-style: italic;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+/* ============================
+   iOS Frame 组件
+   ============================ */
+const iosFrameStyles = {
+  wrapper: {
+    display: 'inline-block',
+    padding: 10,
+    background: '#000',
+    borderRadius: 54,
+    boxShadow: '0 0 0 2px #2a2a2a, 0 20px 60px rgba(0,0,0,0.3)',
+    position: 'relative',
+  },
+  screen: {
+    position: 'relative',
+    borderRadius: 44,
+    overflow: 'hidden',
+    background: '#fff',
+  },
+  statusBar: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    height: 54, display: 'flex', alignItems: 'center',
+    justifyContent: 'space-between', padding: '0 32px',
+    fontSize: 15, fontWeight: 600, zIndex: 20, pointerEvents: 'none',
+  },
+  dynamicIsland: {
+    position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+    width: 124, height: 36, background: '#000', borderRadius: 999, zIndex: 30,
+  },
+  content: {
+    position: 'absolute', top: 54, left: 0, right: 0, bottom: 34,
+    overflow: 'auto', overflowX: 'hidden',
+    WebkitOverflowScrolling: 'touch',
+  },
+  homeIndicator: {
+    position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)',
+    width: 134, height: 5, background: 'rgba(0,0,0,0.25)', borderRadius: 999, zIndex: 10,
+  },
+};
+
+function IosFrame({ children, width = 375, height = 780, time = '9:41', battery = 85, darkMode = false }) {
+  const textColor = darkMode ? '#fff' : '#000';
+  return (
+    <div style={iosFrameStyles.wrapper}>
+      <div style={{ ...iosFrameStyles.screen, width, height, background: darkMode ? '#1a1a1a' : '#F5F0EB' }}>
+        <div style={{ ...iosFrameStyles.statusBar, color: textColor }}>
+          <span>{time}</span>
+          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 11.5a1 1 0 100-2 1 1 0 000 2z" fill={textColor}/><path d="M3 7.5a7 7 0 0110 0" stroke={textColor} strokeWidth="1.3" fill="none" strokeLinecap="round"/><path d="M1 4.5a11 11 0 0114 0" stroke={textColor} strokeWidth="1.3" fill="none" strokeLinecap="round" opacity="0.7"/></svg>
+            <div style={{ width:24, height:11, border:`1.5px solid ${textColor}`, borderRadius:3, padding:1, opacity:0.8 }}>
+              <div style={{ width:`${battery}%`, height:'100%', background:textColor, borderRadius:1, opacity:0.9 }}/>
+            </div>
+          </div>
+        </div>
+        <div style={iosFrameStyles.dynamicIsland} />
+        <div style={iosFrameStyles.content}>{children}</div>
+        <div style={iosFrameStyles.homeIndicator} />
+      </div>
+    </div>
+  );
+}
+
+/* ============================
+   品牌色彩系统
+   ============================ */
+const C = {
+  primary: '#8B6914',     // 暖檀棕
+  primaryLight: '#A88A3A',
+  secondary: '#4A7C59',   // 药草绿
+  secondaryLight: '#6B9E7A',
+  bg: '#F5F0EB',          // 素瓷白
+  bgWarm: '#EDE5DA',
+  card: '#FFFDF9',
+  text: '#3A3226',
+  textLight: '#8B7B6B',
+  textMuted: '#A89888',
+  accent: '#C75450',       // 朱砂红
+  accentSoft: '#E8A5A2',
+  gold: '#C9A84C',
+  brown: '#6B5B4B',
+  border: '#E0D6CA',
+  shadow: 'rgba(90,70,50,0.08)',
+};
+
+/* ============================
+   香方数据
+   ============================ */
+const recipes = [
+  { id:1, name:'安神定志香', category:'安神助眠', emotion:'焦虑', price:268,
+    desc:'以沉香为君，辅以檀香、远志、琥珀，宁心安神，助眠定志',
+    herbs:[
+      {name:'沉香',role:'君',desc:'行气止痛，温中安神'},
+      {name:'檀香',role:'臣',desc:'理气和胃，安神定志'},
+      {name:'远志',role:'佐',desc:'安神益智，祛痰开窍'},
+      {name:'琥珀',role:'使',desc:'镇惊安神，活血散瘀'},
+    ], wuxing:'水', color:'#5B7FA5' },
+  { id:2, name:'疏肝解郁香', category:'疏肝解郁', emotion:'低落', price:288,
+    desc:'以柴胡为君，配白芍、香附、薄荷，疏肝理气，解郁畅情',
+    herbs:[
+      {name:'柴胡',role:'君',desc:'和解表里，疏肝升阳'},
+      {name:'白芍',role:'臣',desc:'养血柔肝，缓中止痛'},
+      {name:'香附',role:'佐',desc:'理气解郁，调经止痛'},
+      {name:'薄荷',role:'使',desc:'疏散风热，清利头目'},
+    ], wuxing:'木', color:'#6B9E7A' },
+  { id:3, name:'清心宁神香', category:'清心宁神', emotion:'烦躁', price:258,
+    desc:'以莲子心为君，配柏子仁、茯神、龙眼肉，清心火，安心神',
+    herbs:[
+      {name:'莲子心',role:'君',desc:'清心安神，交通心肾'},
+      {name:'柏子仁',role:'臣',desc:'养心安神，润肠通便'},
+      {name:'茯神',role:'佐',desc:'宁心安神，利水消肿'},
+      {name:'龙眼肉',role:'使',desc:'补益心脾，养血安神'},
+    ], wuxing:'火', color:'#C75450' },
+  { id:4, name:'温阳益气香', category:'温阳益气', emotion:'疲惫', price:278,
+    desc:'以肉桂为君，配干姜、黄芪、甘草，温阳散寒，益气固表',
+    herbs:[
+      {name:'肉桂',role:'君',desc:'补火助阳，引火归元'},
+      {name:'干姜',role:'臣',desc:'温中散寒，回阳通脉'},
+      {name:'黄芪',role:'佐',desc:'补气升阳，益卫固表'},
+      {name:'甘草',role:'使',desc:'补脾益气，调和诸药'},
+    ], wuxing:'土', color:'#C9A84C' },
+  { id:5, name:'固本培元香', category:'补肾固本', emotion:'疲惫', price:358,
+    desc:'以熟地黄为君，配山茱萸、枸杞、杜仲，补肾固本，培元纳气',
+    herbs:[
+      {name:'熟地黄',role:'君',desc:'滋阴补血，益精填髓'},
+      {name:'山茱萸',role:'臣',desc:'补益肝肾，收敛固涩'},
+      {name:'枸杞',role:'佐',desc:'滋补肝肾，益精明目'},
+      {name:'杜仲',role:'使',desc:'补肝肾，强筋骨'},
+    ], wuxing:'水', color:'#5B7FA5' },
+  { id:6, name:'芳香化湿香', category:'祛湿健脾', emotion:'烦躁', price:248,
+    desc:'以苍术为君，配白芷、藿香、佩兰，芳香化湿，醒脾和胃',
+    herbs:[
+      {name:'苍术',role:'君',desc:'燥湿健脾，祛风散寒'},
+      {name:'白芷',role:'臣',desc:'散风除湿，通窍止痛'},
+      {name:'藿香',role:'佐',desc:'芳香化浊，和中止呕'},
+      {name:'佩兰',role:'使',desc:'芳香化湿，醒脾开胃'},
+    ], wuxing:'土', color:'#C9A84C' },
+  { id:7, name:'理气活血香', category:'理气活血', emotion:'低落', price:298,
+    desc:'以当归为君，配川芎、红花、桃仁，活血化瘀，理气止痛',
+    herbs:[
+      {name:'当归',role:'君',desc:'补血活血，调经止痛'},
+      {name:'川芎',role:'臣',desc:'活血行气，祛风止痛'},
+      {name:'红花',role:'佐',desc:'活血通经，散瘀止痛'},
+      {name:'桃仁',role:'使',desc:'活血祛瘀，润肠通便'},
+    ], wuxing:'木', color:'#6B9E7A' },
+  { id:8, name:'祛风散寒香', category:'温经散寒', emotion:'低落', price:228,
+    desc:'以艾叶为君，配桂枝、细辛、防风，温经散寒，祛风止痛',
+    herbs:[
+      {name:'艾叶',role:'君',desc:'温经止血，散寒止痛'},
+      {name:'桂枝',role:'臣',desc:'发汗解肌，温通经脉'},
+      {name:'细辛',role:'佐',desc:'祛风散寒，通窍止痛'},
+      {name:'防风',role:'使',desc:'祛风解表，胜湿止痛'},
+    ], wuxing:'水', color:'#5B7FA5' },
+];
+
+const emotions = [
+  { key:'calm', label:'平静', emoji:'😌', color:'#6B9E7A' },
+  { key:'down', label:'低落', emoji:'😔', color:'#5B7FA5' },
+  { key:'anxious', label:'焦虑', emoji:'😰', color:'#C9A84C' },
+  { key:'irritated', label:'烦躁', emoji:'😤', color:'#C75450' },
+  { key:'tired', label:'疲惫', emoji:'😴', color:'#8B7B6B' },
+  { key:'good', label:'舒畅', emoji:'😊', color:'#A88A3A' },
+];
+
+const categories = ['全部','安神助眠','疏肝解郁','清心宁神','温阳益气','补肾固本'];
+
+/* ============================
+   共享 TabBar 组件
+   ============================ */
+function TabBar({ active = 0, onTab }) {
+  const tabs = [
+    { icon:'🏠', label:'首页' },
+    { icon:'💬', label:'AI调香师' },
+    { icon:'📦', label:'香方集' },
+    { icon:'👤', label:'我的' },
+  ];
+  return (
+    <div style={{
+      position:'absolute', bottom:0, left:0, right:0, height:56,
+      background:'#FFFDF9', borderTop:`1px solid ${C.border}`,
+      display:'flex', alignItems:'center', justifyContent:'space-around',
+      zIndex:50, paddingBottom:4,
+    }}>
+      {tabs.map((t, i) => (
+        <div key={i} onClick={() => onTab && onTab(i)}
+          style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2, cursor:'pointer',
+            opacity: active === i ? 1 : 0.5,
+            transform: active === i ? 'scale(1.05)' : 'scale(1)',
+            transition: 'all 0.2s',
+        }}>
+          <span style={{ fontSize:20 }}>{t.icon}</span>
+          <span style={{ fontSize:10, color: active === i ? C.primary : C.textLight, fontWeight: active === i ? 600 : 400 }}>{t.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ============================
+   屏幕 ① 首页
+   ============================ */
+function HomeScreen() {
+  return (
+    <div style={{ background: C.bg, minHeight:'100%', paddingBottom:70, position:'relative' }}>
+      {/* 顶部问候 */}
+      <div style={{
+        background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryLight} 100%)`,
+        padding: '60px 24px 28px',
+        color: '#FFFDF9',
+      }}>
+        <div style={{ fontSize:22, fontWeight:700, fontFamily:"'Noto Serif SC', serif", marginBottom:4, letterSpacing:2 }}>
+          抚心合香
+        </div>
+        <div style={{ fontSize:14, opacity:0.85, fontWeight:300, letterSpacing:1 }}>
+          今天，你的心情如何？
+        </div>
+      </div>
+
+      {/* 情绪快选 */}
+      <div style={{ padding:'20px 16px 0' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
+          <span style={{ fontSize:15, fontWeight:600, color:C.text }}>选择你的情绪</span>
+          <span style={{ fontSize:12, color:C.textMuted }}>让AI为你配香 →</span>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:10 }}>
+          {emotions.map(e => (
+            <div key={e.key} style={{
+              background: C.card, borderRadius:14, padding:'14px 8px',
+              textAlign:'center', boxShadow:`0 2px 8px ${C.shadow}`,
+              border: `1px solid ${C.border}`,
+              cursor:'pointer',
+              transition:'transform 0.15s',
+            }}
+            onMouseEnter={ev => ev.currentTarget.style.transform='translateY(-2px)'}
+            onMouseLeave={ev => ev.currentTarget.style.transform='none'}
+            >
+              <div style={{ fontSize:26, marginBottom:4 }}>{e.emoji}</div>
+              <div style={{ fontSize:12, color:C.text, fontWeight:500 }}>{e.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 功能宫格 */}
+      <div style={{ padding:'24px 16px 0' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8 }}>
+          {[
+            {icon:'🔮', label:'AI调香师'},
+            {icon:'📖', label:'香识百科'},
+            {icon:'🎓', label:'制香学堂'},
+            {icon:'🏠', label:'工坊预约'},
+          ].map((f,i) => (
+            <div key={i} style={{ textAlign:'center', cursor:'pointer' }}>
+              <div style={{
+                width:50, height:50, borderRadius:16, margin:'0 auto 6px',
+                background: i===0 ? `linear-gradient(135deg, ${C.primary}, ${C.primaryLight})` : C.card,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:22, boxShadow:`0 2px 6px ${C.shadow}`,
+                border: `1px solid ${i===0 ? 'transparent' : C.border}`,
+              }}>{f.icon}</div>
+              <div style={{ fontSize:11, color:C.text }}>{f.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 热门推荐 */}
+      <div style={{ padding:'24px 16px 0' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+          <span style={{ fontSize:15, fontWeight:600, color:C.text }}>为你精选香方</span>
+          <span style={{ fontSize:12, color:C.primary, cursor:'pointer' }}>查看全部</span>
+        </div>
+        <div style={{ display:'flex', gap:12, overflow:'hidden' }}>
+          {recipes.slice(0,3).map(r => (
+            <div key={r.id} style={{
+              minWidth:150, background:C.card, borderRadius:14,
+              boxShadow:`0 2px 8px ${C.shadow}`, border:`1px solid ${C.border}`,
+              overflow:'hidden', cursor:'pointer',
+            }}>
+              <div style={{ height:90, background:`linear-gradient(135deg, ${r.color}22, ${r.color}11)`,
+                display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ fontSize:36, opacity:0.6 }}>🌿</div>
+              </div>
+              <div style={{ padding:'10px 12px' }}>
+                <div style={{ fontSize:13, fontWeight:600, color:C.text, marginBottom:4 }}>{r.name}</div>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span style={{ fontSize:10, color:C.textMuted }}>{r.category}</span>
+                  <span style={{ fontSize:14, fontWeight:700, color:C.accent }}>¥{r.price}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 传承人寄语 */}
+      <div style={{ margin:'24px 16px 0', padding:16, background:`linear-gradient(135deg, ${C.bgWarm}, ${C.bg})`,
+        borderRadius:14, border:`1px solid ${C.border}` }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+          <div style={{ width:36, height:36, borderRadius:'50%', background:C.primary, display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:16 }}>
+            陈
+          </div>
+          <div>
+            <div style={{ fontSize:13, fontWeight:600, color:C.text }}>陈卫平 · 传承人</div>
+            <div style={{ fontSize:10, color:C.textMuted }}>福州市级非遗冷凝合香传承人</div>
+          </div>
+        </div>
+        <div style={{ fontSize:12, color:C.textLight, lineHeight:1.8, fontStyle:'italic' }}>
+          "合香之道，贵在因人配香。每一块香牌，都该有它自己的故事。"
+        </div>
+      </div>
+
+      <TabBar active={0} />
+    </div>
+  );
+}
+
+/* ============================
+   屏幕 ② AI调香师
+   ============================ */
+function AiChatScreen() {
+  const [showCard, setShowCard] = React.useState(false);
+  const messages = [
+    { role:'ai', text:'你好呀，我是抚心合香的AI调香师 🙏' },
+    { role:'ai', text:'请告诉我，你今天的心情如何？是焦虑、低落，还是只是想安静地待一会儿？我会根据你的状态，为你推荐一炷最合适的香。' },
+    { role:'user', text:'最近工作压力很大，晚上总是翻来覆去睡不着，白天又很疲惫' },
+    { role:'ai', text:'我理解你的感受。长期的焦虑和失眠，从中医角度看属于「心神不宁，肝失疏泄」。你描述的状态，与我手中的一副古方很是契合——' },
+    { role:'ai', text:'我为你推荐「安神定志香」。这副香方以沉香为君药，辅以檀香、远志、琥珀，专门针对焦虑失眠、心神不宁的症状。沉香能温中安神，琥珀可镇惊定志，二者相合，恰能安抚你不安的心。', hasCard: true },
+  ];
+
+  return (
+    <div style={{ background:C.bg, minHeight:'100%', display:'flex', flexDirection:'column', position:'relative' }}>
+      {/* 顶栏 */}
+      <div style={{
+        padding:'12px 16px', background:C.card,
+        borderBottom:`1px solid ${C.border}`,
+        display:'flex', alignItems:'center', gap:10,
+      }}>
+        <div style={{ width:32, height:32, borderRadius:'50%', background:`linear-gradient(135deg, ${C.primary}, ${C.primaryLight})`,
+          display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:14, fontWeight:700 }}>
+          香
+        </div>
+        <div>
+          <div style={{ fontSize:14, fontWeight:600, color:C.text }}>AI调香师</div>
+          <div style={{ fontSize:10, color:C.secondary }}>在线 · 中医情志调香</div>
+        </div>
+      </div>
+
+      {/* 对话区 */}
+      <div style={{ flex:1, padding:'16px 14px', overflow:'auto', paddingBottom:120 }}>
+        {messages.map((m, i) => (
+          <div key={i} style={{
+            display:'flex', justifyContent: m.role==='user' ? 'flex-end' : 'flex-start',
+            marginBottom:14,
+          }}>
+            {m.role === 'ai' && (
+              <div style={{ width:28, height:28, borderRadius:'50%', background:C.primary,
+                display:'flex', alignItems:'center', justifyContent:'center', color:'#fff',
+                fontSize:11, fontWeight:700, marginRight:8, flexShrink:0, marginTop:2 }}>
+                香
+              </div>
+            )}
+            <div style={{ maxWidth:'75%' }}>
+              <div style={{
+                background: m.role==='user' ? C.primary : C.card,
+                color: m.role==='user' ? '#FFFDF9' : C.text,
+                padding:'10px 14px', borderRadius: m.role==='user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                fontSize:13, lineHeight:1.7,
+                boxShadow:`0 1px 4px ${C.shadow}`,
+                border: m.role==='user' ? 'none' : `1px solid ${C.border}`,
+              }}>
+                {m.text}
+              </div>
+              {/* 香方推荐卡片 */}
+              {m.hasCard && (
+                <div style={{
+                  marginTop:10, background:C.card, borderRadius:14,
+                  border:`1px solid ${C.gold}`,
+                  boxShadow:`0 4px 12px rgba(201,168,76,0.15)`,
+                  overflow:'hidden', cursor:'pointer',
+                }}>
+                  <div style={{
+                    background:`linear-gradient(135deg, ${C.primary}, ${C.primaryLight})`,
+                    padding:'10px 14px', color:'#fff',
+                  }}>
+                    <div style={{ fontSize:15, fontWeight:700, fontFamily:"'Noto Serif SC',serif" }}>安神定志香</div>
+                    <div style={{ fontSize:11, opacity:0.85, marginTop:2 }}>沉香 · 檀香 · 远志 · 琥珀</div>
+                  </div>
+                  <div style={{ padding:12 }}>
+                    <div style={{ display:'flex', gap:6, marginBottom:8 }}>
+                      {['安神助眠','焦虑缓解','心神安宁'].map((t,i) => (
+                        <span key={i} style={{
+                          fontSize:10, padding:'3px 8px', borderRadius:10,
+                          background:`${C.secondary}15`, color:C.secondary,
+                          border:`1px solid ${C.secondary}33`,
+                        }}>{t}</span>
+                      ))}
+                    </div>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <span style={{ fontSize:18, fontWeight:700, color:C.accent }}>¥268</span>
+                      <span style={{
+                        fontSize:12, padding:'6px 16px', borderRadius:20,
+                        background:C.primary, color:'#fff', fontWeight:500,
+                      }}>立即请香</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 快捷情绪标签 */}
+      <div style={{
+        position:'absolute', bottom:62, left:0, right:0,
+        background:C.card, borderTop:`1px solid ${C.border}`,
+        padding:'8px 12px', display:'flex', gap:6, overflow:'auto',
+      }}>
+        {['最近失眠','工作压力大','想静心','心情低落','焦虑不安','疲惫乏力'].map((t,i) => (
+          <span key={i} style={{
+            flexShrink:0, fontSize:11, padding:'5px 12px', borderRadius:16,
+            background:`${C.primary}10`, color:C.primary, border:`1px solid ${C.primary}30`,
+            cursor:'pointer', whiteSpace:'nowrap',
+          }}>{t}</span>
+        ))}
+      </div>
+
+      {/* 输入框 */}
+      <div style={{
+        position:'absolute', bottom:0, left:0, right:0,
+        background:C.card, padding:'10px 14px',
+        borderTop:`1px solid ${C.border}`,
+        display:'flex', gap:8, alignItems:'center',
+      }}>
+        <div style={{
+          flex:1, background:C.bg, borderRadius:20,
+          padding:'8px 14px', fontSize:13, color:C.textMuted,
+          border:`1px solid ${C.border}`,
+        }}>描述你的情绪状态...</div>
+        <div style={{
+          width:34, height:34, borderRadius:'50%',
+          background:C.primary, display:'flex', alignItems:'center', justifyContent:'center',
+          color:'#fff', fontSize:16, cursor:'pointer',
+        }}>↑</div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================
+   屏幕 ③ 香方集
+   ============================ */
+function CollectionScreen() {
+  const [activeCat, setActiveCat] = React.useState(0);
+  const filtered = activeCat === 0 ? recipes : recipes.filter(r => r.category === categories[activeCat]);
+  return (
+    <div style={{ background:C.bg, minHeight:'100%', position:'relative', paddingBottom:70 }}>
+      {/* 顶栏 */}
+      <div style={{
+        padding:'56px 16px 12px',
+        background:`linear-gradient(135deg, ${C.primary}, ${C.primaryLight})`,
+        color:'#fff',
+      }}>
+        <div style={{ fontSize:20, fontWeight:700, fontFamily:"'Noto Serif SC',serif", letterSpacing:2 }}>香方集</div>
+        <div style={{ fontSize:12, opacity:0.8, marginTop:2, fontWeight:300 }}>传承古方，因人配香</div>
+      </div>
+
+      {/* 分类Tab */}
+      <div style={{
+        display:'flex', gap:0, padding:'12px 12px 0', overflow:'auto',
+        borderBottom:`1px solid ${C.border}`, background:C.card,
+      }}>
+        {categories.map((c,i) => (
+          <div key={i} onClick={() => setActiveCat(i)} style={{
+            padding:'8px 12px', fontSize:12, whiteSpace:'nowrap', cursor:'pointer',
+            color: activeCat===i ? C.primary : C.textLight,
+            fontWeight: activeCat===i ? 600 : 400,
+            borderBottom: activeCat===i ? `2px solid ${C.primary}` : '2px solid transparent',
+            transition:'all 0.2s',
+          }}>{c}</div>
+        ))}
+      </div>
+
+      {/* 香方列表 */}
+      <div style={{ padding:'12px 14px' }}>
+        {filtered.map(r => (
+          <div key={r.id} style={{
+            display:'flex', gap:12, background:C.card, borderRadius:14,
+            padding:12, marginBottom:10,
+            border:`1px solid ${C.border}`, boxShadow:`0 1px 4px ${C.shadow}`,
+            cursor:'pointer',
+          }}>
+            <div style={{
+              width:80, height:80, borderRadius:12, flexShrink:0,
+              background:`linear-gradient(135deg, ${r.color}22, ${r.color}11)`,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              border:`1px solid ${r.color}20`,
+            }}>
+              <div style={{ fontSize:30, opacity:0.7 }}>🌿</div>
+            </div>
+            <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center' }}>
+              <div style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:4 }}>{r.name}</div>
+              <div style={{ fontSize:11, color:C.textLight, lineHeight:1.5, marginBottom:6 }}>{r.desc.slice(0,24)}...</div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:10, padding:'2px 8px', borderRadius:8, background:`${C.secondary}15`, color:C.secondary }}>
+                  {r.category}
+                </span>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:16, fontWeight:700, color:C.accent }}>¥{r.price}</span>
+                  <span style={{
+                    fontSize:11, padding:'4px 12px', borderRadius:14,
+                    background:C.primary, color:'#fff', cursor:'pointer',
+                  }}>请香</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <TabBar active={2} />
+    </div>
+  );
+}
+
+/* ============================
+   屏幕 ④ 香方详情
+   ============================ */
+function DetailScreen() {
+  const r = recipes[0]; // 安神定志香
+  return (
+    <div style={{ background:C.bg, minHeight:'100%', paddingBottom:80 }}>
+      {/* 产品大图 */}
+      <div style={{
+        height:200,
+        background:`linear-gradient(180deg, ${r.color}30 0%, ${C.bg} 100%)`,
+        display:'flex', alignItems:'center', justifyContent:'center',
+        position:'relative',
+      }}>
+        <div style={{ fontSize:80, opacity:0.4 }}>🌿</div>
+        <div style={{
+          position:'absolute', top:12, left:12, width:28, height:28, borderRadius:'50%',
+          background:'rgba(255,255,255,0.8)', display:'flex', alignItems:'center', justifyContent:'center',
+          fontSize:14, cursor:'pointer',
+        }}>←</div>
+      </div>
+
+      {/* 基本信息 */}
+      <div style={{ padding:'0 16px', marginTop:-16 }}>
+        <div style={{
+          background:C.card, borderRadius:16, padding:16,
+          boxShadow:`0 4px 12px ${C.shadow}`, border:`1px solid ${C.border}`,
+        }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
+            <div>
+              <div style={{ fontSize:20, fontWeight:700, color:C.text, fontFamily:"'Noto Serif SC',serif" }}>
+                {r.name}
+              </div>
+              <div style={{ fontSize:12, color:C.textLight, marginTop:2 }}>传承古方 · 非遗技艺制作</div>
+            </div>
+            <div style={{ fontSize:24, fontWeight:700, color:C.accent }}>¥{r.price}</div>
+          </div>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            {[r.category, r.emotion+'缓解', '天然香材'].map((t,i) => (
+              <span key={i} style={{
+                fontSize:10, padding:'3px 10px', borderRadius:10,
+                background: i===0 ? `${C.secondary}15` : i===1 ? `${C.accentSoft}20` : `${C.primary}10`,
+                color: i===0 ? C.secondary : i===1 ? C.accent : C.primary,
+              }}>{t}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 药材组成 */}
+      <div style={{ padding:'16px 16px 0' }}>
+        <div style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:10 }}>
+          药材组成 · 君臣佐使
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+          {r.herbs.map((h,i) => (
+            <div key={i} style={{
+              background:C.card, borderRadius:12, padding:12,
+              borderLeft:`3px solid ${i===0 ? C.accent : i===1 ? C.primary : i===2 ? C.secondary : C.gold}`,
+              boxShadow:`0 1px 4px ${C.shadow}`,
+            }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                <span style={{ fontSize:15, fontWeight:700, color:C.text }}>{h.name}</span>
+                <span style={{
+                  fontSize:10, padding:'2px 8px', borderRadius:8,
+                  background: i===0 ? `${C.accent}15` : i===1 ? `${C.primary}15` : i===2 ? `${C.secondary}15` : `${C.gold}15`,
+                  color: i===0 ? C.accent : i===1 ? C.primary : i===2 ? C.secondary : C.gold,
+                  fontWeight:600,
+                }}>{h.role}</span>
+              </div>
+              <div style={{ fontSize:11, color:C.textLight, lineHeight:1.5 }}>{h.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 配伍解读 */}
+      <div style={{ padding:'16px 16px 0' }}>
+        <div style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:8 }}>配伍解读</div>
+        <div style={{
+          background:C.card, borderRadius:14, padding:14,
+          border:`1px solid ${C.border}`, lineHeight:1.8,
+        }}>
+          <div style={{ fontSize:12, color:C.text, marginBottom:8 }}>{r.desc}</div>
+          <div style={{ fontSize:11, color:C.textLight }}>
+            此方遵循中医「君臣佐使」配伍原则，沉香为君药主安神，檀香为臣药辅理气，远志为佐药益智，琥珀为使药镇惊。四药合用，共奏宁心安神之效。
+          </div>
+          <div style={{ marginTop:10, padding:10, background:`${C.secondary}08`, borderRadius:10, border:`1px solid ${C.secondary}20` }}>
+            <div style={{ fontSize:11, color:C.secondary, fontWeight:600, marginBottom:4 }}>五行属性 · 水</div>
+            <div style={{ fontSize:10, color:C.textLight }}>水主肾，藏精，主纳气。此方以水为本，温补肾阳，引火归元。</div>
+          </div>
+        </div>
+      </div>
+
+      {/* 底部购买栏 */}
+      <div style={{
+        position:'fixed', bottom:0, left:0, right:0,
+        background:C.card, padding:'10px 16px',
+        borderTop:`1px solid ${C.border}`,
+        display:'flex', gap:10, alignItems:'center',
+        zIndex:50, maxWidth:375,
+      }}>
+        <div style={{
+          width:40, height:40, borderRadius:12, background:C.bg,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          border:`1px solid ${C.border}`, fontSize:18,
+        }}>♡</div>
+        <div style={{
+          flex:1, padding:'12px 0', borderRadius:24,
+          background:`linear-gradient(135deg, ${C.primary}, ${C.primaryLight})`,
+          color:'#fff', textAlign:'center', fontSize:15, fontWeight:600,
+          cursor:'pointer', letterSpacing:2,
+        }}>
+          立即请香 · ¥{r.price}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================
+   屏幕 ⑤ 我的
+   ============================ */
+function ProfileScreen() {
+  const weekData = [
+    {day:'一',val:3},{day:'二',val:2},{day:'三',val:4},{day:'四',val:2},{day:'五',val:5},{day:'六',val:3},{day:'日',val:4},
+  ];
+  return (
+    <div style={{ background:C.bg, minHeight:'100%', position:'relative', paddingBottom:70 }}>
+      {/* 头像区 */}
+      <div style={{
+        padding:'56px 20px 20px',
+        background:`linear-gradient(135deg, ${C.primary}, ${C.primaryLight})`,
+        color:'#fff',
+      }}>
+        <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+          <div style={{
+            width:56, height:56, borderRadius:'50%',
+            background:'rgba(255,255,255,0.2)', border:'2px solid rgba(255,255,255,0.4)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:24,
+          }}>🧘</div>
+          <div>
+            <div style={{ fontSize:18, fontWeight:600 }}>香友 · 静心</div>
+            <div style={{ fontSize:12, opacity:0.8, marginTop:2 }}>已用香 28 天 · 非遗传承体验者</div>
+          </div>
+        </div>
+      </div>
+
+      {/* 情绪日志 */}
+      <div style={{ padding:'16px 14px 0' }}>
+        <div style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:10 }}>情绪日志 · 近7日</div>
+        <div style={{
+          background:C.card, borderRadius:14, padding:14,
+          border:`1px solid ${C.border}`, boxShadow:`0 1px 4px ${C.shadow}`,
+        }}>
+          <svg width="100%" height="80" viewBox="0 0 300 80">
+            {weekData.map((d,i) => {
+              const x = 20 + i * 40;
+              const y = 70 - d.val * 12;
+              return (
+                <g key={i}>
+                  <line x1={x} y1={y} x2={x+40} y2={70 - (weekData[i+1]?.val||0)*12}
+                    stroke={C.primary} strokeWidth="2" opacity={i<6?0.4:0} />
+                  <circle cx={x} cy={y} r="4" fill={C.primary} />
+                  <text x={x} y={78} textAnchor="middle" fontSize="10" fill={C.textMuted}>{d.day}</text>
+                </g>
+              );
+            })}
+          </svg>
+          <div style={{ display:'flex', justifyContent:'space-between', marginTop:8, paddingTop:8, borderTop:`1px solid ${C.border}` }}>
+            <span style={{ fontSize:11, color:C.textLight }}>本周平均情绪指数</span>
+            <span style={{ fontSize:13, fontWeight:600, color:C.secondary }}>良好 ↑</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 我的香方 */}
+      <div style={{ padding:'14px 14px 0' }}>
+        <div style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:10 }}>当前用香方案</div>
+        <div style={{
+          background:C.card, borderRadius:14, padding:14,
+          border:`1px solid ${C.gold}40`, boxShadow:`0 2px 8px rgba(201,168,76,0.1)`,
+        }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:600, color:C.text, fontFamily:"'Noto Serif SC',serif" }}>安神定志香</div>
+              <div style={{ fontSize:11, color:C.textLight, marginTop:2 }}>已使用 12 天 · 剩余约 5 个月</div>
+            </div>
+            <div style={{ padding:'6px 14px', borderRadius:14, background:C.primary, color:'#fff', fontSize:12, cursor:'pointer' }}>
+              续方请香
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 功能列表 */}
+      <div style={{ padding:'14px 14px 0' }}>
+        {[
+          {icon:'📋', label:'购香档案', desc:'3 笔订单', arrow:true},
+          {icon:'🏆', label:'成就徽章', desc:'已获得 2 枚', arrow:true},
+          {icon:'⚙️', label:'设置', desc:'', arrow:true},
+          {icon:'📞', label:'联系传承人', desc:'陈卫平老师', arrow:true},
+        ].map((item,i) => (
+          <div key={i} style={{
+            display:'flex', alignItems:'center', gap:12,
+            padding:'14px 0',
+            borderBottom: i<3 ? `1px solid ${C.border}` : 'none',
+            cursor:'pointer',
+          }}>
+            <span style={{ fontSize:18 }}>{item.icon}</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:14, color:C.text }}>{item.label}</div>
+              {item.desc && <div style={{ fontSize:11, color:C.textMuted, marginTop:1 }}>{item.desc}</div>}
+            </div>
+            {item.arrow && <span style={{ color:C.textMuted, fontSize:14 }}>›</span>}
+          </div>
+        ))}
+      </div>
+
+      <TabBar active={3} />
+    </div>
+  );
+}
+
+/* ============================
+   主展示页
+   ============================ */
+function App() {
+  const screens = [
+    { id:'home', label:'① 首页', component:<HomeScreen /> },
+    { id:'chat', label:'② AI调香师', component:<AiChatScreen /> },
+    { id:'collection', label:'③ 香方集', component:<CollectionScreen /> },
+    { id:'detail', label:'④ 香方详情', component:<DetailScreen /> },
+    { id:'profile', label:'⑤ 我的', component:<ProfileScreen /> },
+  ];
+
+  return (
+    <div>
+      <div className="page-title">抚心合香 · H5 原型设计</div>
+      <div className="page-subtitle">「你告诉我心情，我为你配一炷香」</div>
+      <div className="phones-grid">
+        {screens.map(s => (
+          <div className="phone-col" key={s.id}>
+            <div className="phone-label">{s.label}</div>
+            <IosFrame width={375} height={780} time="9:41" battery={85}>
+              {s.component}
+            </IosFrame>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
