@@ -71,6 +71,36 @@ const routes = [
     component: () => import('../views/ProfilePage.vue'),
     meta: { title: '安' },
   },
+  {
+    path: '/profile/favorites',
+    name: 'Favorites',
+    component: () => import('../views/FavoritesPage.vue'),
+    meta: { title: '我的收藏' },
+  },
+  {
+    path: '/profile/health',
+    name: 'Health',
+    component: () => import('../views/HealthPage.vue'),
+    meta: { title: '健康管理' },
+  },
+  {
+    path: '/profile/archive',
+    name: 'Archive',
+    component: () => import('../views/ArchivePage.vue'),
+    meta: { title: '我的档案' },
+  },
+  {
+    path: '/heritage/knowledge',
+    name: 'KnowledgeList',
+    component: () => import('../views/KnowledgeListPage.vue'),
+    meta: { title: '香识百科' },
+  },
+  {
+    path: '/heritage/videos',
+    name: 'VideoList',
+    component: () => import('../views/VideoListPage.vue'),
+    meta: { title: '制香学堂' },
+  },
 ]
 
 const router = createRouter({

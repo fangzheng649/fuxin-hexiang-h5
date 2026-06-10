@@ -27,6 +27,16 @@
   --m: #B5AA90;    /* 金·银灰 */
   --wt: #4A6B8A;   /* 水·蓝 */
 
+  /* 君臣佐使角色色 */
+  --role-jun: #4E2E1E;
+  --role-chen: #4A7C59;
+  --role-zuo: #4A6B8A;
+  --role-shi: #C9A050;
+
+  /* 辅助色 */
+  --text-light: #F5ECDA;
+  --bg-warm: #E8DCC8;
+
   /* 交互色 */
   --hr: #7A2E2E;   /* 活跃Tab */
 

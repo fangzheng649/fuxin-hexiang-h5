@@ -22,6 +22,29 @@ const addToCart = () => {
     showToast('该香方已在香囊中')
   }
 }
+
+const handleShare = async () => {
+  const p = product.value
+  const shareData = {
+    title: `${p.name} — 抚心合香`,
+    text: `${p.name}：${p.effect}。以香入药，以心疗心。`,
+    url: window.location.href,
+  }
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData)
+    } catch { /* user cancelled */ }
+  } else if (navigator.clipboard) {
+    try {
+      await navigator.clipboard.writeText(shareData.url)
+      showToast('链接已复制，快去分享吧')
+    } catch {
+      showToast('分享链接：' + shareData.url)
+    }
+  } else {
+    showToast('分享链接：' + shareData.url)
+  }
+}
 </script>
 
 <template>
@@ -79,7 +102,7 @@ const addToCart = () => {
     <!-- Bottom Bar -->
     <div class="bottom-bar">
       <button class="bar-btn home-btn" @click="router.push('/home')">首页</button>
-      <button class="bar-btn share-btn" @click="showToast('分享功能即将推出')">分享</button>
+      <button class="bar-btn share-btn" @click="handleShare">分享</button>
       <button class="bar-btn buy-btn" @click="addToCart">加入香囊</button>
     </div>
   </div>

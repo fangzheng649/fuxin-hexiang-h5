@@ -97,12 +97,10 @@ const menuGroups = [
 const handleMenu = (item) => {
   switch (item.action) {
     case 'favorites':
-      const favs = JSON.parse(localStorage.getItem('fuxin_favorites') || '[]')
-      if (favs.length) { showToast(`已收藏 ${favs.length} 个香方`) }
-      else { showToast('收藏功能即将推出') }
+      router.push('/profile/favorites')
       break
     case 'health':
-      showToast('健康管理功能即将推出')
+      router.push('/profile/health')
       break
     case 'notifications':
       router.push('/profile/notifications')
@@ -260,7 +258,7 @@ onMounted(() => {
     </div>
 
     <!-- My Recipes -->
-    <SectionHeader title="香方档案" more="全部 ›" @more="showToast('完整档案即将推出')" />
+    <SectionHeader title="香方档案" more="全部 ›" to="/profile/archive" />
     <div class="recipe-list">
       <div v-for="recipe in myRecipes" :key="recipe.name" class="my-recipe">
         <div class="my-recipe-info">
@@ -276,7 +274,7 @@ onMounted(() => {
     <CloudDivider />
 
     <!-- Achievements -->
-    <SectionHeader title="成就收集" more="全部 ›" @more="showToast('完整成就页面即将推出')" />
+    <SectionHeader title="成就收集" more="全部 ›" to="/profile/archive" />
     <div class="achievement-scroll hide-scrollbar">
       <div v-for="ach in achievements" :key="ach.id" class="achievement-item">
         <div class="achievement-circle" :style="{ background: ach.color, opacity: ach.done ? 1 : 0.5 }">

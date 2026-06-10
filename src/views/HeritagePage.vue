@@ -75,7 +75,7 @@ const knowledgeIcons = {
     </div>
 
     <!-- Knowledge Cards -->
-    <SectionHeader title="香识百科" more="更多 ›" @more="showToast('更多知识即将推出')" />
+    <SectionHeader title="香识百科" more="更多 ›" to="/heritage/knowledge" />
     <div class="knowledge-cards">
       <div v-for="item in knowledgeList" :key="item.id" class="knowledge-card" @click="openKnowledge(item)">
         <div class="knowledge-icon" :style="{ background: item.color + '18' }">
@@ -93,7 +93,7 @@ const knowledgeIcons = {
     <CloudDivider />
 
     <!-- Videos -->
-    <SectionHeader title="制香学堂" more="全部 ›" @more="showToast('更多视频即将推出')" />
+    <SectionHeader title="制香学堂" more="全部 ›" to="/heritage/videos" />
     <div class="video-scroll hide-scrollbar">
       <div v-for="video in videos" :key="video.id" class="video-card" @click="showToast('视频播放功能即将推出')">
         <div class="video-thumb" :style="{ background: video.thumb }">
