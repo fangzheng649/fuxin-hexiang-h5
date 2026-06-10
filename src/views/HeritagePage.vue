@@ -1,5 +1,7 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { showToast, showDialog } from 'vant'
 import { knowledgeList } from '../data/knowledge.js'
 import { videos } from '../data/videos.js'
 import { workshops } from '../data/workshops.js'
@@ -7,6 +9,7 @@ import { communityPosts } from '../data/community.js'
 import CloudDivider from '../components/CloudDivider.vue'
 import SectionHeader from '../components/SectionHeader.vue'
 
+const router = useRouter()
 const communityTab = ref(0)
 const likedPosts = ref(new Set())
 
@@ -18,8 +21,33 @@ const toggleLike = (id) => {
   }
 }
 
-const handleBooking = () => {
-  alert('预约成功！我们会通过微信通知您具体安排。')
+// 工坊预约
+const handleBooking = (slot, index) => {
+  showDialog({
+    title: '预约确认',
+    message: `确认预约 ${slot.date} ${slot.time}？\n剩余 ${slot.remain} 位`,
+    confirmButtonText: '确认预约',
+    cancelButtonText: '取消',
+  }).then(() => {
+    workshops[index].remain = Math.max(0, workshops[index].remain - 1)
+    showToast('预约成功！我们将通过微信通知您具体安排')
+  }).catch(() => {})
+}
+
+// 知识卡片详情
+const showKnowledge = ref(false)
+const selectedKnowledge = ref(null)
+const openKnowledge = (item) => {
+  selectedKnowledge.value = item
+  showKnowledge.value = true
+}
+
+// 社区帖子详情
+const showPostDetail = ref(false)
+const selectedPost = ref(null)
+const openPost = (post) => {
+  selectedPost.value = post
+  showPostDetail.value = true
 }
 
 const knowledgeIcons = {
@@ -47,9 +75,9 @@ const knowledgeIcons = {
     </div>
 
     <!-- Knowledge Cards -->
-    <SectionHeader title="香识百科" more="更多 ›" />
+    <SectionHeader title="香识百科" more="更多 ›" @more="showToast('更多知识即将推出')" />
     <div class="knowledge-cards">
-      <div v-for="item in knowledgeList" :key="item.id" class="knowledge-card">
+      <div v-for="item in knowledgeList" :key="item.id" class="knowledge-card" @click="openKnowledge(item)">
         <div class="knowledge-icon" :style="{ background: item.color + '18' }">
           <svg viewBox="0 0 24 24" width="24" height="24" :stroke="item.color" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path :d="knowledgeIcons[item.icon]" />
@@ -65,9 +93,9 @@ const knowledgeIcons = {
     <CloudDivider />
 
     <!-- Videos -->
-    <SectionHeader title="制香学堂" more="全部 ›" />
+    <SectionHeader title="制香学堂" more="全部 ›" @more="showToast('更多视频即将推出')" />
     <div class="video-scroll hide-scrollbar">
-      <div v-for="video in videos" :key="video.id" class="video-card">
+      <div v-for="video in videos" :key="video.id" class="video-card" @click="showToast('视频播放功能即将推出')">
         <div class="video-thumb" :style="{ background: video.thumb }">
           <img v-if="video.image" :src="video.image" :alt="video.title"
             @error="$event.target.style.display='none'" loading="lazy" />
@@ -84,7 +112,7 @@ const knowledgeIcons = {
     <CloudDivider />
 
     <!-- Game Card -->
-    <div class="game-card">
+    <div class="game-card" @click="router.push('/heritage/game')">
       <img src="/images/hero/game-card.jpg" alt="配香游戏" class="game-bg"
         @error="$event.target.style.display='none'" loading="lazy" />
       <div class="game-overlay"></div>
@@ -96,7 +124,7 @@ const knowledgeIcons = {
     <CloudDivider />
 
     <!-- Workshop -->
-    <SectionHeader title="工坊预约" more="详情 ›" />
+    <SectionHeader title="工坊预约" more="详情 ›" @more="showToast('更多详情请咨询客服')" />
     <div class="workshop-card">
       <div class="workshop-header">
         <svg viewBox="0 0 24 24" width="18" height="18" stroke="var(--tp)" fill="none" stroke-width="1.5" stroke-linecap="round">
@@ -114,7 +142,7 @@ const knowledgeIcons = {
             <div class="workslot-date">{{ slot.date }}</div>
             <div class="workslot-remain">余{{ slot.remain }}位</div>
           </div>
-          <button class="workslot-btn" @click="handleBooking">预约</button>
+          <button class="workslot-btn" @click="handleBooking(slot, i)">预约</button>
         </div>
       </div>
     </div>
@@ -122,7 +150,7 @@ const knowledgeIcons = {
     <CloudDivider />
 
     <!-- Community -->
-    <SectionHeader title="香气社区" more="发布 ›" />
+    <SectionHeader title="香气社区" more="发布 ›" @more="showToast('社区发帖功能即将推出')" />
     <div class="community-tabs">
       <div
         v-for="(tab, i) in ['最新', '热门', '精华']"
@@ -135,7 +163,7 @@ const knowledgeIcons = {
       </div>
     </div>
     <div class="community-list">
-      <div v-for="post in communityPosts" :key="post.id" class="community-post">
+      <div v-for="post in communityPosts" :key="post.id" class="community-post" @click="openPost(post)">
         <div class="community-user">
           <div class="community-avatar" :style="{ background: post.avatar.bg }">
             {{ post.avatar.emoji }}
@@ -159,6 +187,45 @@ const knowledgeIcons = {
     </div>
 
     <div style="height: 20px" />
+
+    <!-- Knowledge Detail Popup -->
+    <van-popup v-model:show="showKnowledge" position="bottom" round :style="{ maxHeight: '65vh' }">
+      <div v-if="selectedKnowledge" class="knowledge-detail">
+        <div class="knowledge-detail-header" :style="{ background: selectedKnowledge.color + '18' }">
+          <div class="knowledge-detail-icon" :style="{ background: selectedKnowledge.color }">
+            <svg viewBox="0 0 24 24" width="28" height="28" :stroke="selectedKnowledge.color" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path :d="knowledgeIcons[selectedKnowledge.icon]" />
+            </svg>
+          </div>
+          <div class="knowledge-detail-title brand">{{ selectedKnowledge.title }}</div>
+        </div>
+        <div class="knowledge-detail-text">{{ selectedKnowledge.text }}</div>
+      </div>
+    </van-popup>
+
+    <!-- Post Detail Popup -->
+    <van-popup v-model:show="showPostDetail" position="bottom" round :style="{ maxHeight: '70vh' }">
+      <div v-if="selectedPost" class="post-detail">
+        <div class="post-detail-user">
+          <div class="community-avatar" :style="{ background: selectedPost.avatar.bg }">
+            {{ selectedPost.avatar.emoji }}
+          </div>
+          <div>
+            <div class="post-detail-name">{{ selectedPost.username }}</div>
+            <div class="post-detail-time">{{ selectedPost.time }}</div>
+          </div>
+        </div>
+        <div class="post-detail-text">{{ selectedPost.text }}</div>
+        <span v-if="selectedPost.recipe" class="community-recipe-tag">{{ selectedPost.recipe }}</span>
+        <div class="post-detail-stats">
+          <span>❤️ {{ selectedPost.likes }} 喜欢</span>
+          <span>💬 {{ selectedPost.comments }} 评论</span>
+        </div>
+        <div class="post-detail-comments">
+          <div class="post-detail-comment-placeholder">评论区功能即将推出</div>
+        </div>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -527,4 +594,31 @@ const knowledgeIcons = {
   transition: all 0.2s;
 }
 .community-action.liked { color: var(--f); }
+
+/* Knowledge Detail Popup */
+.knowledge-detail { }
+.knowledge-detail-header {
+  padding: 24px 20px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.knowledge-detail-icon {
+  width: 60px; height: 60px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+.knowledge-detail-title { font-size: 18px; font-weight: 600; color: var(--t1); }
+.knowledge-detail-text { padding: 16px 20px 24px; font-size: 14px; color: var(--t2); line-height: 1.8; }
+
+/* Post Detail Popup */
+.post-detail { padding: 20px; }
+.post-detail-user { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.post-detail-name { font-size: 14px; font-weight: 500; color: var(--t1); }
+.post-detail-time { font-size: 11px; color: var(--t3); }
+.post-detail-text { font-size: 14px; color: var(--t2); line-height: 1.7; margin-bottom: 10px; }
+.post-detail-stats {
+  display: flex; gap: 20px; font-size: 12px; color: var(--t3);
+  padding: 12px 0; border-top: 1px solid var(--mg); margin-top: 8px;
+}
+.post-detail-comments { margin-top: 12px; }
+.post-detail-comment-placeholder {
+  text-align: center; font-size: 12px; color: var(--t3); padding: 20px 0;
+}
 </style>

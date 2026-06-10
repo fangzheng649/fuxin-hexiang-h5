@@ -1,17 +1,31 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { showToast, showDialog } from 'vant'
 import { products } from '../data/products.js'
 import CloudDivider from '../components/CloudDivider.vue'
 import SectionHeader from '../components/SectionHeader.vue'
 
+const router = useRouter()
 const activeTab = ref(0)
 const tabs = ['全部', '木·肝', '火·心', '土·脾', '金·肺', '水·肾']
 const selectedProduct = ref(null)
 const showDetail = ref(false)
+const searchText = ref('')
+const cartItems = ref(JSON.parse(localStorage.getItem('fuxin_cart') || '[]'))
 
 const filteredProducts = computed(() => {
-  if (activeTab.value === 0) return products
-  return products.filter(p => p.element === tabs[activeTab.value])
+  let list = activeTab.value === 0 ? products : products.filter(p => p.element === tabs[activeTab.value])
+  if (searchText.value.trim()) {
+    const q = searchText.value.trim().toLowerCase()
+    list = list.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.desc.toLowerCase().includes(q) ||
+      p.effect.toLowerCase().includes(q) ||
+      p.herbs.some(h => h.n.includes(q))
+    )
+  }
+  return list
 })
 
 const openDetail = (product) => {
@@ -26,11 +40,51 @@ const closeDetail = () => {
 
 const herbColor = { '君': '#4E2E1E', '臣': '#4A7C59', '佐': '#4A6B8A', '使': '#C9A050' }
 
-// 礼盒数据
+// 加入香囊
+const addToCart = () => {
+  if (!selectedProduct.value) return
+  const id = selectedProduct.value.id
+  if (!cartItems.value.includes(id)) {
+    cartItems.value.push(id)
+    localStorage.setItem('fuxin_cart', JSON.stringify(cartItems.value))
+    showToast('已加入香囊')
+  } else {
+    showToast('该香方已在香囊中')
+  }
+  closeDetail()
+}
+
+const isInCart = (id) => cartItems.value.includes(id)
+
+// 定制香方 → 跳转 AI 聊天
+const handleCustom = () => {
+  router.push('/chat')
+}
+
+// 礼盒
+const showGiftDetail = ref(false)
+const selectedGift = ref(null)
+const openGift = (gift) => {
+  selectedGift.value = gift
+  showGiftDetail.value = true
+}
+
 const gifts = [
   { name: '四季安宁·礼盒', info: '春夏秋冬各一方，四季安康', price: 588, color: 'linear-gradient(135deg,#C8B898,#8B7355)', image: '/images/gifts/gift-1.jpg' },
   { name: '五行调和·礼盒', info: '金木水火土五方齐全', price: 698, color: 'linear-gradient(135deg,#B89555,#6B4E35)', image: '/images/gifts/gift-2.jpg' },
 ]
+
+// 订阅
+const handleSubscribe = () => {
+  showDialog({
+    title: '按月订阅 · 香伴四季',
+    message: '每月一方节气香，顺应四时调养身心\n\n订阅价：¥99/月（首月半价¥49.5）\n每季赠送专属香囊袋\n\n订阅后每月1号自动发货',
+    confirmButtonText: '立即订阅',
+    cancelButtonText: '再想想',
+  }).then(() => {
+    showToast('订阅功能即将上线')
+  }).catch(() => {})
+}
 </script>
 
 <template>
@@ -40,7 +94,7 @@ const gifts = [
       <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--t3)" fill="none" stroke-width="2" stroke-linecap="round">
         <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
       </svg>
-      <input type="text" placeholder="搜索香方、药材、功效..." />
+      <input type="text" placeholder="搜索香方、药材、功效..." v-model="searchText" />
     </div>
 
     <!-- Category Tabs -->
@@ -84,7 +138,7 @@ const gifts = [
     <CloudDivider />
 
     <!-- Custom -->
-    <div class="shop-custom" @click="showDetail = true">
+    <div class="shop-custom" @click="handleCustom">
       <div class="shop-custom-title brand">定制专属香方</div>
       <div class="shop-custom-desc">AI分析体质，传承人手工调制，独一无二的香方</div>
       <span class="shop-custom-btn">开始定制</span>
@@ -93,7 +147,7 @@ const gifts = [
     <CloudDivider />
 
     <!-- Subscribe -->
-    <div class="shop-subscribe">
+    <div class="shop-subscribe" @click="handleSubscribe">
       <div class="shop-subscribe-title brand">按月订阅 · 香伴四季</div>
       <div class="shop-subscribe-desc">
         每月一方节气香，顺应四时调养身心
@@ -104,9 +158,9 @@ const gifts = [
     <CloudDivider />
 
     <!-- Gift -->
-    <SectionHeader title="香礼 · 赠礼优选" more="更多 ›" />
+    <SectionHeader title="香礼 · 赠礼优选" more="更多 ›" @more="showToast('更多香礼即将推出')" />
     <div class="gift-scroll hide-scrollbar">
-      <div v-for="gift in gifts" :key="gift.name" class="gift-card">
+      <div v-for="gift in gifts" :key="gift.name" class="gift-card" @click="openGift(gift)">
         <div class="gift-card-image" :style="{ background: gift.color }">
           <img v-if="gift.image" :src="gift.image" :alt="gift.name"
             @error="$event.target.style.display='none'" loading="lazy" />
@@ -121,6 +175,25 @@ const gifts = [
     </div>
 
     <div style="height: 20px" />
+
+    <!-- Gift Detail Popup -->
+    <van-popup v-model:show="showGiftDetail" position="bottom" round :style="{ maxHeight: '60vh' }">
+      <div v-if="selectedGift" class="gift-detail">
+        <div class="gift-detail-image" :style="{ background: selectedGift.color }">
+          <img v-if="selectedGift.image" :src="selectedGift.image" :alt="selectedGift.name"
+            @error="$event.target.style.display='none'" loading="lazy" />
+        </div>
+        <div class="gift-detail-body">
+          <div class="gift-detail-name brand">{{ selectedGift.name }}</div>
+          <div class="gift-detail-info">{{ selectedGift.info }}</div>
+          <div class="gift-detail-price">¥{{ selectedGift.price }}</div>
+          <div class="gift-detail-desc">
+            精选上等药材，传承人手工调配，精美礼盒包装。适合送礼或自用，传递一份来自千年非遗的温暖心意。
+          </div>
+          <button class="btn-primary" @click="showGiftDetail = false; showToast('礼盒功能即将上线')">了解详情</button>
+        </div>
+      </div>
+    </van-popup>
 
     <!-- Product Detail Popup -->
     <Transition name="popup">
@@ -178,7 +251,9 @@ const gifts = [
             </div>
 
             <div class="detail-actions">
-              <button class="btn-primary" @click="closeDetail">加入香囊</button>
+              <button class="btn-primary" :class="{ 'btn-added': isInCart(selectedProduct.id) }" @click="addToCart">
+                {{ isInCart(selectedProduct.id) ? '已加入香囊 ✓' : '加入香囊' }}
+              </button>
             </div>
           </div>
         </div>
@@ -402,6 +477,7 @@ const gifts = [
   background: linear-gradient(135deg, rgba(78, 46, 30, 0.06), rgba(74, 124, 89, 0.06));
   border-radius: 14px;
   border: 1px dashed var(--tl);
+  cursor: pointer;
 }
 .shop-subscribe-title {
   font-size: 14px;
@@ -644,6 +720,24 @@ const gifts = [
   letter-spacing: 4px;
 }
 .btn-primary:active { background: var(--td); }
+.btn-added { background: var(--hg) !important; }
+
+/* Gift Detail Popup */
+.gift-detail { }
+.gift-detail-image {
+  height: 160px; display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.gift-detail-image img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.gift-detail-body { padding: 20px; }
+.gift-detail-name { font-size: 18px; font-weight: 600; color: var(--t1); margin-bottom: 4px; }
+.gift-detail-info { font-size: 13px; color: var(--t2); margin-bottom: 8px; }
+.gift-detail-price {
+  font-size: 24px; font-weight: 700; color: var(--tp); margin-bottom: 12px;
+  font-family: 'Noto Serif SC', serif;
+}
+.gift-detail-price::before { content: '¥'; font-size: 14px; }
+.gift-detail-desc { font-size: 12px; color: var(--t2); line-height: 1.7; margin-bottom: 16px; }
 
 /* Transition */
 .popup-enter-active { animation: fadeIn 0.2s ease; }

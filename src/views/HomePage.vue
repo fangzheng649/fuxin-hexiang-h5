@@ -1,6 +1,7 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { showImagePreview, showToast } from 'vant'
 import { products } from '../data/products.js'
 import { notes } from '../data/notes.js'
 import { quickIcons, noteIcons } from '../icons/index.js'
@@ -9,10 +10,13 @@ import SectionHeader from '../components/SectionHeader.vue'
 
 const router = useRouter()
 
+// 每日推荐 — 支持"换一换"
+const shuffleSeed = ref(0)
 const dailyProduct = computed(() => {
-  const dayIndex = new Date().getDate() % products.length
-  return products[dayIndex]
+  const idx = (new Date().getDate() + shuffleSeed.value) % products.length
+  return products[idx]
 })
+const handleShuffle = () => { shuffleSeed.value++ }
 
 const seasonProduct = computed(() => {
   const m = new Date().getMonth() + 1
@@ -42,6 +46,14 @@ const handleQuickEntry = (tab) => {
 
 const handleWorkshop = () => {
   router.push('/heritage')
+}
+
+// 手记详情弹窗
+const showNoteDetail = ref(false)
+const selectedNote = ref(null)
+const openNote = (note) => {
+  selectedNote.value = note
+  showNoteDetail.value = true
 }
 </script>
 
@@ -122,7 +134,7 @@ const handleWorkshop = () => {
     <CloudDivider />
 
     <!-- Daily Recommendation -->
-    <SectionHeader title="每日一香" more="换一换 ›" />
+    <SectionHeader title="每日一香" more="换一换 ›" @more="handleShuffle" />
     <div class="card" @click="router.push('/shop')">
       <div class="daily-herb-image" :style="{ background: dailyProduct.color }">
         <img v-if="dailyProduct.image?.banner" :src="dailyProduct.image.banner" :alt="dailyProduct.name"
@@ -140,7 +152,7 @@ const handleWorkshop = () => {
     <CloudDivider />
 
     <!-- Seasonal Recommendation -->
-    <SectionHeader title="芒种 · 节气推荐" more="更多 ›" />
+    <SectionHeader title="芒种 · 节气推荐" more="更多 ›" :to="'/shop'" />
     <div class="card" @click="router.push('/shop')">
       <div class="season-image" :style="{ background: seasonProduct.color }">
         <img v-if="seasonProduct.image?.banner" :src="seasonProduct.image.banner" :alt="seasonProduct.name"
@@ -158,9 +170,9 @@ const handleWorkshop = () => {
     <CloudDivider />
 
     <!-- Craftsman Notes -->
-    <SectionHeader title="传承人手记" more="全部 ›" />
+    <SectionHeader title="传承人手记" more="全部 ›" :to="'/notes'" />
     <div class="notes-scroll hide-scrollbar">
-      <div v-for="note in notes" :key="note.id" class="note-card">
+      <div v-for="note in notes" :key="note.id" class="note-card" @click="openNote(note)">
         <div class="note-card-image" :style="{ background: note.bg }">
           <img v-if="note.image" :src="note.image" :alt="note.title"
             @error="$event.target.style.display='none'" loading="lazy" />
@@ -187,6 +199,24 @@ const handleWorkshop = () => {
     </div>
 
     <div style="height: 20px" />
+
+    <!-- Note Detail Popup -->
+    <van-popup v-model:show="showNoteDetail" position="bottom" round :style="{ maxHeight: '75vh' }">
+      <div v-if="selectedNote" class="note-detail">
+        <div class="note-detail-header">
+          <span class="note-detail-title brand">{{ selectedNote.title }}</span>
+          <span class="note-detail-date">{{ selectedNote.date }}</span>
+        </div>
+        <div class="note-detail-image" :style="{ background: selectedNote.bg }">
+          <img v-if="selectedNote.image" :src="selectedNote.image" :alt="selectedNote.title"
+            @error="$event.target.style.display='none'" loading="lazy" />
+        </div>
+        <div class="note-detail-text">{{ selectedNote.full }}</div>
+        <div class="note-detail-footer">
+          <span class="note-detail-author brand">陈卫平 · 传承人手记</span>
+        </div>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -645,4 +675,18 @@ const handleWorkshop = () => {
   position: relative;
   z-index: 1;
 }
+
+/* Note Detail Popup */
+.note-detail { padding: 20px; }
+.note-detail-header { margin-bottom: 16px; }
+.note-detail-title { font-size: 18px; font-weight: 600; color: var(--t1); display: block; margin-bottom: 4px; }
+.note-detail-date { font-size: 12px; color: var(--t3); }
+.note-detail-image {
+  height: 180px; border-radius: 12px; overflow: hidden; margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: center; position: relative;
+}
+.note-detail-image img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.note-detail-text { font-size: 14px; color: var(--t2); line-height: 1.8; margin-bottom: 16px; }
+.note-detail-footer { padding-top: 12px; border-top: 1px solid var(--mg); }
+.note-detail-author { font-size: 12px; color: var(--hg); }
 </style>

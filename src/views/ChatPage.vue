@@ -1,7 +1,13 @@
 <script setup>
 import { ref, nextTick, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { showToast } from 'vant'
 import { emotions } from '../data/emotions.js'
 import { products } from '../data/products.js'
+import { useChatApi } from '../composables/useChatApi.js'
+
+const router = useRouter()
+const { sendMessage, loading: apiLoading } = useChatApi()
 
 // ==================== 状态 ====================
 const messages = ref([])
@@ -9,6 +15,7 @@ const step = ref(0)
 const inputText = ref('')
 const typing = ref(false)
 const containerRef = ref(null)
+const mode = ref('online') // online | offline
 let initialized = false
 const timers = []
 
@@ -30,9 +37,70 @@ const delay = (ms) => new Promise((r) => {
   timers.push(t)
 })
 
-// ==================== 离线对话流程 ====================
+// ==================== API 消息历史 ====================
+const chatHistory = ref([])
+
+// ==================== 在线模式（DeepSeek API） ====================
+const handleSendOnline = async () => {
+  const text = inputText.value.trim()
+  if (!text || typing.value) return
+  addMsg({ type: 'user', text })
+  inputText.value = ''
+  chatHistory.value.push({ role: 'user', content: text })
+
+  typing.value = true
+  scrollToBottom()
+
+  // 创建 AI 消息占位
+  const aiMsg = { type: 'ai', text: '' }
+  messages.value.push(aiMsg)
+  const msgIdx = messages.value.length - 1
+
+  try {
+    const result = await sendMessage(
+      chatHistory.value,
+      // onChunk
+      (chunk, full) => {
+        messages.value[msgIdx] = { ...messages.value[msgIdx], text: full.replace(/\[FiveElements:[^\]]+\]/g, '').replace(/\[Recipe:[^\]]+\]/g, '').trim() || full }
+        scrollToBottom()
+      },
+      // onFiveElements
+      (fiveEl) => {
+        messages.value.push({ type: 'fiveElements', elements: fiveEl.elements, desc: fiveEl.desc })
+        scrollToBottom()
+      },
+      // onRecipe
+      (recipeName) => {
+        const recipe = products.find(p => p.name === recipeName)
+        if (recipe) {
+          messages.value.push({
+            type: 'recipe', name: recipe.name, effect: recipe.effect,
+            color: recipe.color, image: recipe.image?.chat,
+            herbs: recipe.herbs.map(h => ({ n: h.n, r: h.r, c: { '君': '#4E2E1E', '臣': '#4A7C59', '佐': '#4A6B8A', '使': '#C9A050' }[h.r] })),
+            desc: recipe.principle,
+          })
+          scrollToBottom()
+        }
+      }
+    )
+
+    chatHistory.value.push({ role: 'assistant', content: result.text })
+    step.value = 10 // 标记已完成
+  } catch (e) {
+    // API 失败，切换到离线模式
+    messages.value.splice(msgIdx, 1)
+    typing.value = false
+    mode.value = 'offline'
+    showToast('AI 暂时不可用，已切换为离线模式')
+    offlineFlow.welcome()
+    return
+  }
+
+  typing.value = false
+}
+
+// ==================== 离线对话流程（fallback） ====================
 const offlineFlow = {
-  // step 0→1: 欢迎语
   async welcome() {
     await delay(500)
     addMsg({ type: 'ai', text: '你好，我是你的AI配香助手 🪷\n\n在开始之前，先深呼吸三次……\n\n呼——吸——呼——\n感受到了吗？那一丝丝的宁静。\n\n那我们开始吧。' })
@@ -46,7 +114,6 @@ const offlineFlow = {
     step.value = 2
   },
 
-  // step 2→3: 情绪选择后追问
   async afterEmotion() {
     await delay(800)
     typing.value = true
@@ -57,7 +124,6 @@ const offlineFlow = {
     step.value = 3
   },
 
-  // step 3→4: 用户回答后 → 五行分析
   async afterDetail() {
     await delay(800)
     typing.value = true
@@ -108,7 +174,6 @@ const offlineFlow = {
     step.value = 6
   },
 
-  // step ≥5: 推荐后续
   async afterRecipe() {
     await delay(500)
     typing.value = true
@@ -118,7 +183,6 @@ const offlineFlow = {
     addMsg({ type: 'ai', text: '感谢你的分享。香方会在3-5天内送到，使用一周后，记得回来告诉我你的感受 🪷\n\n我们可以根据你的变化来调整方案。' })
   },
 
-  // step < 3: 未选情绪时的提示
   async pleaseSelectEmotion() {
     await delay(500)
     typing.value = true
@@ -128,7 +192,6 @@ const offlineFlow = {
     addMsg({ type: 'ai', text: '谢谢你的分享，请先选择一个最符合你当前状态的选项，这样我可以更精准地为你推荐香方。' })
   },
 
-  // step 3 未详细回答
   async pleaseDetail() {
     await delay(500)
     typing.value = true
@@ -141,7 +204,6 @@ const offlineFlow = {
 
 // ==================== 事件处理 ====================
 const handleEmotionSelect = (emotion, idx) => {
-  // 标记选中状态
   messages.value = messages.value.map((m) =>
     m.type === 'emotions' ? { ...m, selectedIdx: idx } : m
   )
@@ -151,6 +213,10 @@ const handleEmotionSelect = (emotion, idx) => {
 }
 
 const handleSend = async () => {
+  if (mode.value === 'online') {
+    return handleSendOnline()
+  }
+
   const text = inputText.value.trim()
   if (!text) return
   addMsg({ type: 'user', text })
@@ -169,21 +235,33 @@ const handleSend = async () => {
 }
 
 const handleReset = () => {
-  // 清理定时器
   timers.forEach((t) => clearTimeout(t))
   timers.length = 0
   messages.value = []
   step.value = 0
   inputText.value = ''
   typing.value = false
+  chatHistory.value = []
   initialized = false
+  mode.value = 'online'
+
+  if (!initialized) {
+    initialized = true
+    offlineFlow.welcome()
+  }
 }
 
 // 初始化
 onMounted(() => {
   if (!initialized) {
     initialized = true
-    offlineFlow.welcome()
+    // 先尝试在线模式，失败自动 fallback
+    if (mode.value === 'online') {
+      addMsg({ type: 'ai', text: '你好，我是你的AI配香助手 🪷\n\n请告诉我你最近的感受，我会为你分析体质并推荐最适合的香方。\n\n可以直接输入，也可以详细描述你的睡眠、情绪、身体状态。' })
+      step.value = 10
+    } else {
+      offlineFlow.welcome()
+    }
   }
 })
 </script>
@@ -193,7 +271,7 @@ onMounted(() => {
     <!-- Header -->
     <div class="chat-header">
       <h3 class="brand">🪷 AI 配香助手</h3>
-      <p>以千年合香之方，调理今日之情志</p>
+      <p>{{ mode === 'online' ? '以千年合香之方，调理今日之情志' : '离线模式' }}</p>
       <button class="chat-reset" @click="handleReset" title="重新开始">
         <svg viewBox="0 0 24 24" width="18" height="18" stroke="var(--t3)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
@@ -265,7 +343,8 @@ onMounted(() => {
         </div>
 
         <!-- 香方推荐 -->
-        <div v-else-if="msg.type === 'recipe'" class="chat-msg ai fade-in" style="max-width: 90%">
+        <div v-else-if="msg.type === 'recipe'" class="chat-msg ai fade-in" style="max-width: 90%"
+          @click="() => { const p = products.find(x => x.name === msg.name); if (p) router.push(`/shop/product/${p.id}`) }">
           <div class="recipe-result">
             <div class="recipe-result-image" :style="{ background: msg.color }">
               <img
@@ -549,7 +628,9 @@ onMounted(() => {
   overflow: hidden;
   box-shadow: var(--sc);
   border: 1px solid rgba(180, 149, 85, 0.2);
+  cursor: pointer;
 }
+.recipe-result:active { transform: scale(0.98); }
 .recipe-result-image {
   height: 100px;
   display: flex;

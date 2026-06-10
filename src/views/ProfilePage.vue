@@ -1,11 +1,41 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
+import { showToast, showDialog } from 'vant'
 import { achievements } from '../data/achievements.js'
 import CloudDivider from '../components/CloudDivider.vue'
 import SectionHeader from '../components/SectionHeader.vue'
 
+const router = useRouter()
+
+// 用户资料（localStorage 持久化）
+const savedProfile = JSON.parse(localStorage.getItem('fuxin_profile') || '{}')
+const profileName = ref(savedProfile.nickname || '香友 · 小雅')
+const profileConstitution = ref(savedProfile.constitution || '木型体质')
+const profileTag = ref(savedProfile.tag || '肝气偏盛')
+const showEditProfile = ref(false)
+const editNickname = ref('')
+const editConstitution = ref('')
+
+const openEditProfile = () => {
+  editNickname.value = profileName.value
+  editConstitution.value = profileConstitution.value
+  showEditProfile.value = true
+}
+const saveProfile = () => {
+  profileName.value = editNickname.value || profileName.value
+  profileConstitution.value = editConstitution.value || profileConstitution.value
+  localStorage.setItem('fuxin_profile', JSON.stringify({
+    nickname: profileName.value,
+    constitution: profileConstitution.value,
+    tag: profileTag.value,
+  }))
+  showEditProfile.value = false
+  showToast('资料已更新')
+}
+
 // 情绪折线图数据
-const moodData = [
+const moodData = ref(JSON.parse(localStorage.getItem('fuxin_moods') || 'null') || [
   { date: '6/1', score: 3 },
   { date: '6/2', score: 4 },
   { date: '6/3', score: 3 },
@@ -13,7 +43,25 @@ const moodData = [
   { date: '6/5', score: 4 },
   { date: '6/6', score: 5 },
   { date: '6/7', score: 5 },
-]
+])
+
+// 记录心情
+const showMoodRecord = ref(false)
+const moodScore = ref(0)
+const moodNote = ref('')
+const submitMood = () => {
+  if (moodScore.value === 0) { showToast('请选择心情分数'); return }
+  const today = new Date()
+  const dateStr = `${today.getMonth() + 1}/${today.getDate()}`
+  moodData.value.push({ date: dateStr, score: moodScore.value })
+  if (moodData.value.length > 14) moodData.value = moodData.value.slice(-14)
+  localStorage.setItem('fuxin_moods', JSON.stringify(moodData.value))
+  showMoodRecord.value = false
+  moodScore.value = 0
+  moodNote.value = ''
+  showToast('心情已记录 🪷')
+  nextTick(() => drawChart())
+}
 
 const chartRef = ref(null)
 
@@ -33,18 +81,62 @@ const statusMap = {
 // 菜单
 const menuGroups = [
   [
-    { icon: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z', label: '我的收藏', badge: null },
-    { icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', label: '健康管理', badge: null },
+    { icon: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z', label: '我的收藏', badge: null, action: 'favorites' },
+    { icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', label: '健康管理', badge: null, action: 'health' },
   ],
   [
-    { icon: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0', label: '消息通知', badge: '3' },
-    { icon: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', label: '邀请好友', badge: null },
-    { icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', label: '关于我们', badge: null },
+    { icon: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0', label: '消息通知', badge: '3', action: 'notifications' },
+    { icon: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', label: '邀请好友', badge: null, action: 'invite' },
+    { icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', label: '关于我们', badge: null, action: 'about' },
   ],
   [
-    { icon: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z', label: '设置', badge: null },
+    { icon: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z', label: '设置', badge: null, action: 'settings' },
   ],
 ]
+
+const handleMenu = (item) => {
+  switch (item.action) {
+    case 'favorites':
+      const favs = JSON.parse(localStorage.getItem('fuxin_favorites') || '[]')
+      if (favs.length) { showToast(`已收藏 ${favs.length} 个香方`) }
+      else { showToast('收藏功能即将推出') }
+      break
+    case 'health':
+      showToast('健康管理功能即将推出')
+      break
+    case 'notifications':
+      router.push('/profile/notifications')
+      break
+    case 'invite':
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText('http://47.237.113.80').then(() => {
+          showToast('链接已复制，快去分享给好友吧')
+        }).catch(() => showToast('分享链接：http://47.237.113.80'))
+      } else {
+        showToast('分享链接：http://47.237.113.80')
+      }
+      break
+    case 'about':
+      showDialog({
+        title: '关于抚心合香',
+        message: '抚心合香 — 以香入药，以心疗心\n\n传承福州市非物质文化遗产「冷凝合香制作技艺」，以千年古法合香，调理今人情志。\n\n传承人：陈卫平\n版本：v1.0.0',
+        confirmButtonText: '知道了',
+      })
+      break
+    case 'settings':
+      showDialog({
+        title: '设置',
+        message: '通知推送：已开启\n缓存清理：点击确认清理\n当前版本：v1.0.0',
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+      }).then(() => {
+        localStorage.removeItem('fuxin_cart')
+        localStorage.removeItem('fuxin_moods')
+        showToast('缓存已清理')
+      }).catch(() => {})
+      break
+  }
+}
 
 // 绘制情绪折线图
 const drawChart = () => {
@@ -147,15 +239,15 @@ onMounted(() => {
           </svg>
         </div>
         <div>
-          <div class="profile-name brand">香友 · 小雅</div>
+          <div class="profile-name brand">{{ profileName }}</div>
           <div class="profile-constitution">
-            木型体质
-            <span class="profile-tag">肝气偏盛</span>
+            {{ profileConstitution }}
+            <span class="profile-tag">{{ profileTag }}</span>
           </div>
           <div class="profile-current">当前使用：竹影清风</div>
         </div>
       </div>
-      <span class="profile-edit">编辑</span>
+      <span class="profile-edit" @click="openEditProfile">编辑</span>
     </div>
 
     <!-- Mood Chart -->
@@ -164,11 +256,11 @@ onMounted(() => {
       <div class="mood-chart">
         <canvas ref="chartRef" />
       </div>
-      <button class="mood-btn brand">记录今日心情</button>
+      <button class="mood-btn brand" @click="showMoodRecord = true">记录今日心情</button>
     </div>
 
     <!-- My Recipes -->
-    <SectionHeader title="香方档案" more="全部 ›" />
+    <SectionHeader title="香方档案" more="全部 ›" @more="showToast('完整档案即将推出')" />
     <div class="recipe-list">
       <div v-for="recipe in myRecipes" :key="recipe.name" class="my-recipe">
         <div class="my-recipe-info">
@@ -184,7 +276,7 @@ onMounted(() => {
     <CloudDivider />
 
     <!-- Achievements -->
-    <SectionHeader title="成就收集" more="全部 ›" />
+    <SectionHeader title="成就收集" more="全部 ›" @more="showToast('完整成就页面即将推出')" />
     <div class="achievement-scroll hide-scrollbar">
       <div v-for="ach in achievements" :key="ach.id" class="achievement-item">
         <div class="achievement-circle" :style="{ background: ach.color, opacity: ach.done ? 1 : 0.5 }">
@@ -200,7 +292,7 @@ onMounted(() => {
     <!-- Menu -->
     <div class="menu-section">
       <div v-for="(group, gi) in menuGroups" :key="gi" class="menu-group">
-        <div v-for="item in group" :key="item.label" class="menu-item">
+        <div v-for="item in group" :key="item.label" class="menu-item" @click="handleMenu(item)">
           <div class="menu-left">
             <span class="menu-icon">
               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -216,6 +308,47 @@ onMounted(() => {
     </div>
 
     <div style="height: 20px" />
+
+    <!-- Edit Profile Popup -->
+    <van-popup v-model:show="showEditProfile" position="bottom" round :style="{ maxHeight: '50vh' }">
+      <div class="popup-form">
+        <div class="popup-form-title brand">编辑资料</div>
+        <div class="popup-field">
+          <label>昵称</label>
+          <input v-model="editNickname" type="text" placeholder="输入你的昵称" />
+        </div>
+        <div class="popup-field">
+          <label>体质类型</label>
+          <input v-model="editConstitution" type="text" placeholder="如：木型体质" />
+        </div>
+        <button class="popup-submit" @click="saveProfile">保存</button>
+      </div>
+    </van-popup>
+
+    <!-- Mood Record Popup -->
+    <van-popup v-model:show="showMoodRecord" position="bottom" round :style="{ maxHeight: '55vh' }">
+      <div class="popup-form">
+        <div class="popup-form-title brand">记录今日心情</div>
+        <div class="mood-selector">
+          <span
+            v-for="s in [1,2,3,4,5]"
+            :key="s"
+            class="mood-option"
+            :class="{ active: moodScore === s }"
+            @click="moodScore = s"
+          >{{ ['😞','😕','😐','🙂','😊'][s-1] }}</span>
+        </div>
+        <div class="mood-labels">
+          <span v-for="(l, i) in ['很差','不好','一般','不错','很好']" :key="i"
+            class="mood-label" :class="{ active: moodScore === i+1 }">{{ l }}</span>
+        </div>
+        <div class="popup-field">
+          <label>备注（选填）</label>
+          <input v-model="moodNote" type="text" placeholder="今天感觉怎么样..." />
+        </div>
+        <button class="popup-submit" @click="submitMood">提交</button>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -423,4 +556,38 @@ onMounted(() => {
   border-radius: 8px;
 }
 .menu-arrow { font-size: 14px; color: var(--t3); }
+
+/* Popup Form */
+.popup-form { padding: 24px 20px; }
+.popup-form-title { font-size: 18px; font-weight: 600; color: var(--t1); margin-bottom: 20px; text-align: center; }
+.popup-field { margin-bottom: 16px; }
+.popup-field label { display: block; font-size: 13px; color: var(--t2); margin-bottom: 6px; }
+.popup-field input {
+  width: 100%; padding: 10px 14px; border: 1px solid var(--mg); border-radius: 10px;
+  font-size: 14px; color: var(--t1); background: var(--rp); outline: none; font-family: inherit;
+}
+.popup-field input:focus { border-color: var(--tp); }
+.popup-submit {
+  width: 100%; padding: 12px; background: var(--tp); color: white; border: none;
+  border-radius: 12px; font-size: 15px; font-family: 'Noto Serif SC', serif;
+  font-weight: 600; cursor: pointer; letter-spacing: 2px; margin-top: 8px;
+}
+.popup-submit:active { background: var(--td); }
+
+/* Mood Selector */
+.mood-selector {
+  display: flex; justify-content: center; gap: 12px; margin-bottom: 8px;
+}
+.mood-option {
+  font-size: 28px; cursor: pointer; opacity: 0.4; transition: all 0.2s;
+  padding: 4px;
+}
+.mood-option.active { opacity: 1; transform: scale(1.2); }
+.mood-labels {
+  display: flex; justify-content: center; gap: 8px; margin-bottom: 16px;
+}
+.mood-label {
+  font-size: 10px; color: var(--t3); opacity: 0.5; width: 36px; text-align: center;
+}
+.mood-label.active { color: var(--tp); opacity: 1; }
 </style>
