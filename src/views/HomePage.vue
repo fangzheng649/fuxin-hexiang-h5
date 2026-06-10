@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { products } from '../data/products.js'
 import { notes } from '../data/notes.js'
@@ -7,6 +8,23 @@ import CloudDivider from '../components/CloudDivider.vue'
 import SectionHeader from '../components/SectionHeader.vue'
 
 const router = useRouter()
+
+const dailyProduct = computed(() => {
+  const dayIndex = new Date().getDate() % products.length
+  return products[dayIndex]
+})
+
+const seasonProduct = computed(() => {
+  const m = new Date().getMonth() + 1
+  let element = '土·脾'
+  if (m >= 3 && m <= 5) element = '木·肝'
+  else if (m >= 6 && m <= 7) element = '火·心'
+  else if (m === 8) element = '土·脾'
+  else if (m >= 9 && m <= 10) element = '金·肺'
+  else element = '水·肾'
+  const filtered = products.filter(p => p.element === element)
+  return filtered.length > 0 ? filtered[0] : products[0]
+})
 
 const quickEntries = [
   { key: 'ai', title: 'AI调香师', desc: '说说你的心', tab: 1 },
@@ -31,6 +49,9 @@ const handleWorkshop = () => {
   <div class="page home-page">
     <!-- Hero -->
     <div class="hero">
+      <img src="/images/hero/home-hero.jpg" alt="抚心合香" class="hero-bg"
+        @error="$event.target.style.display='none'" loading="lazy" />
+      <div class="hero-overlay"></div>
       <div class="hero-brand brand">抚心合香</div>
       <div class="hero-slogan brand">以香入药，以心疗心</div>
       <div class="hero-quote brand">「四季的香，不必点燃，<br/>放在身边就好。」</div>
@@ -103,14 +124,16 @@ const handleWorkshop = () => {
     <!-- Daily Recommendation -->
     <SectionHeader title="每日一香" more="换一换 ›" />
     <div class="card" @click="router.push('/shop')">
-      <div class="daily-herb-image" :style="{ background: products[0].color }">
-        <span class="daily-herb-name brand">{{ products[0].name }}</span>
+      <div class="daily-herb-image" :style="{ background: dailyProduct.color }">
+        <img v-if="dailyProduct.image?.banner" :src="dailyProduct.image.banner" :alt="dailyProduct.name"
+          @error="$event.target.style.display='none'" loading="lazy" />
+        <span class="daily-herb-name brand">{{ dailyProduct.name }}</span>
         <span class="daily-herb-tag">五行·火</span>
       </div>
       <div class="daily-herb-body">
-        <div class="daily-herb-title brand">「{{ products[0].name }}」香牌</div>
+        <div class="daily-herb-title brand">「{{ dailyProduct.name }}」香牌</div>
         <div class="daily-herb-wuxing">五行属火 · 对应心经</div>
-        <div class="daily-herb-desc">{{ products[0].desc }}{{ products[0].principle.slice(0, 1) === '君' ? '' : '。' }}{{ products[0].principle }}</div>
+        <div class="daily-herb-desc">{{ dailyProduct.desc }}{{ dailyProduct.principle.slice(0, 1) === '君' ? '' : '。' }}{{ dailyProduct.principle }}</div>
       </div>
     </div>
 
@@ -119,14 +142,16 @@ const handleWorkshop = () => {
     <!-- Seasonal Recommendation -->
     <SectionHeader title="芒种 · 节气推荐" more="更多 ›" />
     <div class="card" @click="router.push('/shop')">
-      <div class="season-image" :style="{ background: products[3].color }">
-        <span class="season-name brand">{{ products[3].name }}</span>
+      <div class="season-image" :style="{ background: seasonProduct.color }">
+        <img v-if="seasonProduct.image?.banner" :src="seasonProduct.image.banner" :alt="seasonProduct.name"
+          @error="$event.target.style.display='none'" loading="lazy" />
+        <span class="season-name brand">{{ seasonProduct.name }}</span>
         <span class="season-tag">🌾 芒种时节</span>
       </div>
       <div class="season-body">
-        <div class="season-title brand">「{{ products[3].name }}」香牌</div>
-        <div class="season-effect">{{ products[3].effect }}</div>
-        <div class="season-desc">{{ products[3].desc }}芒种时节，湿气渐重，易犯困倦。此方以健脾化湿为主旨，配伍苍术、茯苓、白术等道地药材，佩戴于身，淡淡药香自然散逸。</div>
+        <div class="season-title brand">「{{ seasonProduct.name }}」香牌</div>
+        <div class="season-effect">{{ seasonProduct.effect }}</div>
+        <div class="season-desc">{{ seasonProduct.desc }}芒种时节，湿气渐重，易犯困倦。此方以健脾化湿为主旨，配伍苍术、茯苓、白术等道地药材，佩戴于身，淡淡药香自然散逸。</div>
       </div>
     </div>
 
@@ -137,11 +162,8 @@ const handleWorkshop = () => {
     <div class="notes-scroll hide-scrollbar">
       <div v-for="note in notes" :key="note.id" class="note-card">
         <div class="note-card-image" :style="{ background: note.bg }">
-          <svg viewBox="0 0 24 24" width="28" height="28" stroke="rgba(255,255,255,0.85)" fill="none" stroke-width="1.5" stroke-linecap="round">
-            <template v-for="(d, i) in (note.id === 1 ? noteIcons.letter : note.id === 2 ? noteIcons.location : note.id === 3 ? noteIcons.layers : noteIcons.book).split('M').filter(Boolean)" :key="i">
-              <path :d="'M' + d" />
-            </template>
-          </svg>
+          <img v-if="note.image" :src="note.image" :alt="note.title"
+            @error="$event.target.style.display='none'" loading="lazy" />
         </div>
         <div class="note-card-body">
           <div class="note-card-title">{{ note.title }}</div>
@@ -155,6 +177,8 @@ const handleWorkshop = () => {
     <!-- Workshop Banner -->
     <SectionHeader title="线下工坊" more="详情 ›" />
     <div class="workshop-banner" @click="handleWorkshop">
+      <img src="/images/hero/workshop-banner.jpg" alt="桐南村工坊" class="workshop-bg"
+        @error="$event.target.style.display='none'" loading="lazy" />
       <div class="workshop-info">
         <h4>📍 福州 · 桐南村工坊</h4>
         <p>亲手制作属于你的冷凝合香，体验千年匠心</p>
@@ -184,6 +208,22 @@ const handleWorkshop = () => {
   min-height: 220px;
   background: linear-gradient(160deg, #E8DCC8, #D9CCAE 50%, #C8B898);
   overflow: hidden;
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(232,220,200,0.45) 0%, rgba(200,184,152,0.6) 100%);
+  z-index: 0;
 }
 
 .hero::before {
@@ -358,6 +398,14 @@ const handleWorkshop = () => {
   overflow: hidden;
 }
 
+.daily-herb-image img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .daily-herb-name {
   font-size: 42px;
   font-weight: 700;
@@ -410,6 +458,14 @@ const handleWorkshop = () => {
   justify-content: center;
   position: relative;
   overflow: hidden;
+}
+
+.season-image img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .season-name {
@@ -489,6 +545,15 @@ const handleWorkshop = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+.note-card-image img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .note-card-body {
@@ -528,6 +593,15 @@ const handleWorkshop = () => {
   overflow: hidden;
 }
 
+.workshop-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
 .workshop-banner::before {
   content: '';
   position: absolute;
@@ -548,11 +622,15 @@ const handleWorkshop = () => {
   font-size: 15px;
   margin-bottom: 4px;
   color: #D4C5B0;
+  position: relative;
+  z-index: 1;
 }
 
 .workshop-info p {
   font-size: 11px;
   opacity: 0.7;
+  position: relative;
+  z-index: 1;
 }
 
 .workshop-btn {
@@ -564,5 +642,7 @@ const handleWorkshop = () => {
   font-size: 12px;
   white-space: nowrap;
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 </style>

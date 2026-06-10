@@ -1,14 +1,27 @@
 <script setup>
-defineProps({
+import { useRouter } from 'vue-router'
+
+const props = defineProps({
   title: { type: String, required: true },
   more: { type: String, default: '更多 ›' },
+  to: { type: [String, Object], default: '' },
 })
+const emit = defineEmits(['more'])
+const router = useRouter()
+
+const handleClick = () => {
+  if (props.to) {
+    router.push(props.to)
+  } else {
+    emit('more')
+  }
+}
 </script>
 
 <template>
   <div class="section-header">
     <span class="section-title">{{ title }}</span>
-    <span class="section-more">{{ more }}</span>
+    <span class="section-more" @click="handleClick">{{ more }}</span>
   </div>
 </template>
 

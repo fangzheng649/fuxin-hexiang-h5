@@ -33,6 +33,9 @@ const knowledgeIcons = {
   <div class="page heritage-page">
     <!-- Hero -->
     <div class="heritage-hero">
+      <img src="/images/hero/heritage-hero.jpg" alt="冷凝合香制作技艺" class="heritage-bg"
+        @error="$event.target.style.display='none'" loading="lazy" />
+      <div class="heritage-overlay"></div>
       <div class="heritage-content">
         <h2 class="brand">冷凝合香制作技艺</h2>
         <p>福州市非物质文化遗产 · 传承千年</p>
@@ -66,6 +69,8 @@ const knowledgeIcons = {
     <div class="video-scroll hide-scrollbar">
       <div v-for="video in videos" :key="video.id" class="video-card">
         <div class="video-thumb" :style="{ background: video.thumb }">
+          <img v-if="video.image" :src="video.image" :alt="video.title"
+            @error="$event.target.style.display='none'" loading="lazy" />
           <div class="video-play">▶</div>
           <span class="video-duration">{{ video.duration }}</span>
         </div>
@@ -80,6 +85,9 @@ const knowledgeIcons = {
 
     <!-- Game Card -->
     <div class="game-card">
+      <img src="/images/hero/game-card.jpg" alt="配香游戏" class="game-bg"
+        @error="$event.target.style.display='none'" loading="lazy" />
+      <div class="game-overlay"></div>
       <h4 class="brand">配香游戏</h4>
       <p>选择药材，搭配君臣佐使，亲手调配属于你的香方</p>
       <span class="game-btn">开始体验</span>
@@ -173,6 +181,22 @@ const knowledgeIcons = {
   align-items: flex-end;
   padding: 20px;
   overflow: hidden;
+}
+
+.heritage-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.heritage-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(26,14,5,0.3) 0%, rgba(58,100,73,0.5) 100%);
+  z-index: 0;
 }
 .heritage-hero::after {
   content: '';
@@ -289,6 +313,15 @@ const knowledgeIcons = {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+.video-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .video-play {
   width: 40px;
@@ -328,6 +361,25 @@ const knowledgeIcons = {
   position: relative;
   overflow: hidden;
 }
+
+.game-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.game-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(58, 100, 73, 0.55);
+  z-index: 0;
+}
+
+.game-card h4 { font-size: 18px; margin-bottom: 8px; position: relative; z-index: 1; }
+.game-card p { font-size: 12px; opacity: 0.85; line-height: 1.6; margin-bottom: 16px; position: relative; z-index: 1; }
 .game-card::before {
   content: '';
   position: absolute;
@@ -339,8 +391,6 @@ const knowledgeIcons = {
   border-radius: 50%;
 }
 .game-card:active { transform: scale(0.98); }
-.game-card h4 { font-size: 18px; margin-bottom: 8px; }
-.game-card p { font-size: 12px; opacity: 0.85; line-height: 1.6; margin-bottom: 16px; }
 .game-btn {
   display: inline-block;
   padding: 10px 28px;
@@ -350,6 +400,8 @@ const knowledgeIcons = {
   color: white;
   font-size: 13px;
   font-family: 'Noto Serif SC', serif;
+  position: relative;
+  z-index: 1;
 }
 
 /* Workshop */

@@ -1,13 +1,18 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { products } from '../data/products.js'
 import CloudDivider from '../components/CloudDivider.vue'
 import SectionHeader from '../components/SectionHeader.vue'
 
 const activeTab = ref(0)
-const tabs = ['全部', '清心', '疏肝', '安神', '健脾', '润肺']
+const tabs = ['全部', '木·肝', '火·心', '土·脾', '金·肺', '水·肾']
 const selectedProduct = ref(null)
 const showDetail = ref(false)
+
+const filteredProducts = computed(() => {
+  if (activeTab.value === 0) return products
+  return products.filter(p => p.element === tabs[activeTab.value])
+})
 
 const openDetail = (product) => {
   selectedProduct.value = product
@@ -23,8 +28,8 @@ const herbColor = { '君': '#4E2E1E', '臣': '#4A7C59', '佐': '#4A6B8A', '使':
 
 // 礼盒数据
 const gifts = [
-  { name: '四季安宁·礼盒', info: '春夏秋冬各一方，四季安康', price: 588, color: 'linear-gradient(135deg,#C8B898,#8B7355)' },
-  { name: '五行调和·礼盒', info: '金木水火土五方齐全', price: 698, color: 'linear-gradient(135deg,#B89555,#6B4E35)' },
+  { name: '四季安宁·礼盒', info: '春夏秋冬各一方，四季安康', price: 588, color: 'linear-gradient(135deg,#C8B898,#8B7355)', image: '/images/gifts/gift-1.jpg' },
+  { name: '五行调和·礼盒', info: '金木水火土五方齐全', price: 698, color: 'linear-gradient(135deg,#B89555,#6B4E35)', image: '/images/gifts/gift-2.jpg' },
 ]
 </script>
 
@@ -54,12 +59,14 @@ const gifts = [
     <!-- Product List -->
     <div class="shop-grid">
       <div
-        v-for="product in products"
+        v-for="product in filteredProducts"
         :key="product.id"
         class="shop-card"
         @click="openDetail(product)"
       >
         <div class="shop-card-image" :style="{ background: product.color }">
+          <img v-if="product.image?.card" :src="product.image.card" :alt="product.name"
+            @error="$event.target.style.display='none'" loading="lazy" />
           <span class="vertical-name brand">{{ product.name }}</span>
         </div>
         <div class="shop-card-body">
@@ -101,6 +108,8 @@ const gifts = [
     <div class="gift-scroll hide-scrollbar">
       <div v-for="gift in gifts" :key="gift.name" class="gift-card">
         <div class="gift-card-image" :style="{ background: gift.color }">
+          <img v-if="gift.image" :src="gift.image" :alt="gift.name"
+            @error="$event.target.style.display='none'" loading="lazy" />
           <span class="brand">{{ gift.name.split('·')[0] }}</span>
         </div>
         <div class="gift-card-body">
@@ -118,6 +127,9 @@ const gifts = [
       <div v-if="showDetail && selectedProduct" class="detail-overlay" @click.self="closeDetail">
         <div class="detail-popup">
           <div class="detail-header" :style="{ background: selectedProduct.color }">
+            <img v-if="selectedProduct.image?.detail" :src="selectedProduct.image.detail" :alt="selectedProduct.name"
+              @error="$event.target.style.display='none'" />
+            <div class="detail-header-overlay"></div>
             <span class="detail-name brand">{{ selectedProduct.name }}</span>
             <span class="detail-element">{{ selectedProduct.element }}</span>
             <button class="detail-close" @click="closeDetail">✕</button>
@@ -278,12 +290,21 @@ const gifts = [
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+.shop-card-image img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .vertical-name {
   font-size: 18px;
   color: rgba(255, 255, 255, 0.7);
   z-index: 1;
   writing-mode: vertical-rl;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 .shop-card-body {
   padding: 14px;
@@ -427,10 +448,21 @@ const gifts = [
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.gift-card-image img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .gift-card-image span {
   font-size: 16px;
   color: rgba(255, 255, 255, 0.9);
+  z-index: 1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 .gift-card-body { padding: 12px; }
 .gift-card-name {
@@ -477,12 +509,25 @@ const gifts = [
   position: relative;
   overflow: hidden;
 }
+.detail-header img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.detail-header-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.4));
+  z-index: 1;
+}
 .detail-name {
   font-size: 36px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  z-index: 2;
 }
 .detail-element {
   position: absolute;
@@ -495,6 +540,7 @@ const gifts = [
   color: var(--hg);
   font-weight: 500;
   backdrop-filter: blur(8px);
+  z-index: 2;
 }
 .detail-close {
   position: absolute;
@@ -512,6 +558,7 @@ const gifts = [
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(4px);
+  z-index: 2;
 }
 .detail-body {
   padding: 20px;

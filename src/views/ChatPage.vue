@@ -1,6 +1,7 @@
 <script setup>
 import { ref, nextTick, onMounted } from 'vue'
 import { emotions } from '../data/emotions.js'
+import { products } from '../data/products.js'
 
 // ==================== 状态 ====================
 const messages = ref([])
@@ -88,11 +89,14 @@ const offlineFlow = {
     typing.value = false
     addMsg({ type: 'ai', text: '你的五行分析显示：木偏旺、水偏弱。\n\n木旺则肝气有余，易急躁失眠；水弱则肾气不足，难以藏精安神。\n\n我为你推荐一个香方 👇' })
     await delay(800)
+    const recommendedName = '竹影清风'
+    const recipe = products.find(p => p.name === recommendedName)
     addMsg({
       type: 'recipe',
       name: '竹影清风',
       effect: '清心降火 · 安神定志 · 交通心肾',
       color: 'linear-gradient(135deg,#8BAA86,#3A6345)',
+      image: recipe?.image?.chat,
       herbs: [
         { n: '檀香', r: '君', c: '#4E2E1E' },
         { n: '柏木', r: '臣', c: '#4A7C59' },
@@ -264,6 +268,14 @@ onMounted(() => {
         <div v-else-if="msg.type === 'recipe'" class="chat-msg ai fade-in" style="max-width: 90%">
           <div class="recipe-result">
             <div class="recipe-result-image" :style="{ background: msg.color }">
+              <img
+                v-if="msg.image"
+                :src="msg.image"
+                :alt="msg.name"
+                loading="lazy"
+                class="recipe-bg-img"
+                @error="$event.target.style.display = 'none'"
+              />
               <span class="brand">{{ msg.name }}</span>
             </div>
             <div class="recipe-result-body">
@@ -543,11 +555,23 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.recipe-bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
 }
 .recipe-result-image span {
   font-size: 32px;
   color: rgba(255, 255, 255, 0.9);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 1;
 }
 .recipe-result-body { padding: 16px; }
 .recipe-result-name {

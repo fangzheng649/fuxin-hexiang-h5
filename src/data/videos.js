@@ -5,6 +5,7 @@ export const videos = [
     views: '1.2万',
     duration: '08:32',
     thumb: 'linear-gradient(135deg,#1A0E05,#3A6345)',
+    image: '/images/videos/video-1.jpg',
   },
   {
     id: 2,
@@ -12,6 +13,7 @@ export const videos = [
     views: '8.6千',
     duration: '12:15',
     thumb: 'linear-gradient(135deg,#2A1A0E,#6B4E35)',
+    image: '/images/videos/video-2.jpg',
   },
   {
     id: 3,
@@ -19,6 +21,7 @@ export const videos = [
     views: '2.1万',
     duration: '06:48',
     thumb: 'linear-gradient(135deg,#1A2A1E,#4A7C59)',
+    image: '/images/videos/video-3.jpg',
   },
   {
     id: 4,
@@ -26,5 +29,6 @@ export const videos = [
     views: '1.5万',
     duration: '10:22',
     thumb: 'linear-gradient(135deg,#1A1A2A,#4A6B8A)',
+    image: '/images/videos/video-4.jpg',
   },
 ]
