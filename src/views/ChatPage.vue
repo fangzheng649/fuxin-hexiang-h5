@@ -1,13 +1,18 @@
 <script setup>
 import { ref, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showToast, showConfirmDialog } from 'vant'
 import { emotions } from '../data/emotions.js'
 import { products } from '../data/products.js'
 import { useChatApi } from '../composables/useChatApi.js'
+import { useUserContext } from '../composables/useUserContext.js'
+import { useChatHistory } from '../composables/useChatHistory.js'
+import { getCurrentSeason, getSeasonGreeting } from '../composables/useSeason.js'
 
 const router = useRouter()
 const { sendMessage, loading: apiLoading } = useChatApi()
+const { buildUserContext } = useUserContext()
+const chatHistoryManager = useChatHistory()
 
 // ==================== 状态 ====================
 const messages = ref([])
@@ -16,6 +21,7 @@ const inputText = ref('')
 const typing = ref(false)
 const containerRef = ref(null)
 const mode = ref('online') // online | offline
+const conversationId = ref('')
 let initialized = false
 const timers = []
 
@@ -40,6 +46,22 @@ const delay = (ms) => new Promise((r) => {
 // ==================== API 消息历史 ====================
 const chatHistory = ref([])
 
+// 情绪→产品映射表（离线模式用）
+const emotionProductMap = {
+  '焦虑': { element: '火', organ: '心', fiveElements: [85, 65, 45, 50, 35], recipe: '竹影清风' },
+  '低落': { element: '木', organ: '肝', fiveElements: [85, 55, 50, 45, 40], recipe: '春风拂柳' },
+  '疲惫': { element: '土', organ: '脾', fiveElements: [45, 50, 85, 55, 40], recipe: '稻香归田' },
+  '烦躁': { element: '金', organ: '肺', fiveElements: [50, 55, 45, 85, 40], recipe: '霜菊傲骨' },
+  '还好': { element: '水', organ: '肾', fiveElements: [40, 45, 50, 55, 85], recipe: '听泉水生' },
+}
+
+// 保存当前对话
+const saveCurrentChat = () => {
+  if (conversationId.value && messages.value.length > 1) {
+    chatHistoryManager.saveConversation(conversationId.value, messages.value, chatHistory.value)
+  }
+}
+
 // ==================== 在线模式（DeepSeek API） ====================
 const handleSendOnline = async () => {
   const text = inputText.value.trim()
@@ -57,8 +79,10 @@ const handleSendOnline = async () => {
   const msgIdx = messages.value.length - 1
 
   try {
+    const userContext = buildUserContext()
     const result = await sendMessage(
       chatHistory.value,
+      userContext,
       // onChunk
       (chunk, full) => {
         messages.value[msgIdx] = { ...messages.value[msgIdx], text: full.replace(/\[FiveElements:[^\]]+\]/g, '').replace(/\[Recipe:[^\]]+\]/g, '').trim() || full }
@@ -86,6 +110,8 @@ const handleSendOnline = async () => {
 
     chatHistory.value.push({ role: 'assistant', content: result.text })
     step.value = 10 // 标记已完成
+    // 保存对话
+    saveCurrentChat()
   } catch (e) {
     // API 失败，切换到离线模式
     messages.value.splice(msgIdx, 1)
@@ -100,77 +126,87 @@ const handleSendOnline = async () => {
 }
 
 // ==================== 离线对话流程（fallback） ====================
+let selectedEmotion = null
+
 const offlineFlow = {
   async welcome() {
+    const season = getCurrentSeason()
+    const seasonText = season.season === '春' ? '春日' : season.season === '夏' ? '夏日' : season.season === '秋' ? '秋日' : season.season === '冬' ? '冬日' : '长夏时节'
     await delay(500)
-    addMsg({ type: 'ai', text: '你好，我是你的AI配香助手 🪷\n\n在开始之前，先深呼吸三次……\n\n呼——吸——呼——\n感受到了吗？那一丝丝的宁静。\n\n那我们开始吧。' })
+    addMsg({ type: 'ai', text: `你好，我是你的AI配香助手。\n\n${seasonText}，正是调养身心的好时候。\n\n先深呼吸三次……\n呼——吸——呼——\n感受到了吗？那一丝丝的宁静。\n\n那我们开始吧。` })
     await delay(1500)
     typing.value = true
     scrollToBottom()
     await delay(1500)
     typing.value = false
-    addMsg({ type: 'ai', text: '你最近的心情怎么样？可以选下面的选项，也可以自己说 👇' })
+    addMsg({ type: 'ai', text: '你最近的心情怎么样？可以选下面的选项，也可以自己说。' })
     addMsg({ type: 'emotions', selectedIdx: -1 })
     step.value = 2
   },
 
-  async afterEmotion() {
+  async afterEmotion(emotionLabel) {
+    selectedEmotion = emotionLabel
+    const mapping = emotionProductMap[emotionLabel]
     await delay(800)
     typing.value = true
     scrollToBottom()
     await delay(1500)
     typing.value = false
-    addMsg({ type: 'ai', text: '我理解你的感受。能再具体说说吗？\n\n比如——睡不着的时候，脑子里会不会想很多事情？还是身体有什么不舒服的地方？' })
+    addMsg({ type: 'ai', text: '我理解你的感受。能再具体说说吗？\n\n比如——最近睡眠怎么样？白天精力如何？身体有没有哪里不舒服？' })
     step.value = 3
   },
 
   async afterDetail() {
+    const mapping = emotionProductMap[selectedEmotion] || emotionProductMap['焦虑']
     await delay(800)
     typing.value = true
     scrollToBottom()
     await delay(1800)
     typing.value = false
-    addMsg({ type: 'ai', text: '从你描述的情况看，这可能与肝气不舒有关。中医讲「肝主疏泄」，肝气郁结则情绪不畅、夜卧不安。\n\n让我帮你看看五行体质倾向——' })
+
+    const organName = mapping.organ
+    const elementName = mapping.element
+    const elementText = elementName === '木' ? '肝' : elementName === '火' ? '心' : elementName === '土' ? '脾' : elementName === '金' ? '肺' : '肾'
+
+    addMsg({ type: 'ai', text: `从你描述的情况看，这可能与${elementText}气不调有关。中医讲「${elementText}主${elementName === '木' ? '疏泄' : elementName === '火' ? '神明' : elementName === '土' ? '运化' : elementName === '金' ? '气' : '藏精'}」，${elementText}气失调则身心失衡。\n\n让我帮你看看五行体质倾向——` })
     await delay(1200)
     typing.value = true
     scrollToBottom()
     await delay(1500)
     typing.value = false
+
+    const elLabels = ['木', '火', '土', '金', '水']
+    const elOrgans = ['肝', '心', '脾', '肺', '肾']
+    const elColors = ['#4A7C59', '#C75450', '#C9A050', '#B5AA90', '#4A6B8A']
     addMsg({
       type: 'fiveElements',
-      elements: [
-        { label: '木', organ: '肝', pct: 85, color: '#4A7C59' },
-        { label: '火', organ: '心', pct: 65, color: '#C75450' },
-        { label: '土', organ: '脾', pct: 50, color: '#C9A050' },
-        { label: '金', organ: '肺', pct: 55, color: '#B5AA90' },
-        { label: '水', organ: '肾', pct: 35, color: '#4A6B8A' },
-      ],
-      desc: '木旺（肝气偏盛）· 水弱（肾气不足）',
+      elements: elLabels.map((l, i) => ({
+        label: l, organ: elOrgans[i], pct: mapping.fiveElements[i], color: elColors[i]
+      })),
+      desc: `${mapping.element}旺（${mapping.organ}气偏盛）`,
     })
     step.value = 5
+
     await delay(1200)
     typing.value = true
     scrollToBottom()
     await delay(1800)
     typing.value = false
-    addMsg({ type: 'ai', text: '你的五行分析显示：木偏旺、水偏弱。\n\n木旺则肝气有余，易急躁失眠；水弱则肾气不足，难以藏精安神。\n\n我为你推荐一个香方 👇' })
+
+    const recipe = products.find(p => p.name === mapping.recipe)
+    addMsg({ type: 'ai', text: `你的五行分析显示：${mapping.element}行偏旺。\n\n我为你推荐一个香方——` })
     await delay(800)
-    const recommendedName = '竹影清风'
-    const recipe = products.find(p => p.name === recommendedName)
-    addMsg({
-      type: 'recipe',
-      name: '竹影清风',
-      effect: '清心降火 · 安神定志 · 交通心肾',
-      color: 'linear-gradient(135deg,#8BAA86,#3A6345)',
-      image: recipe?.image?.chat,
-      herbs: [
-        { n: '檀香', r: '君', c: '#4E2E1E' },
-        { n: '柏木', r: '臣', c: '#4A7C59' },
-        { n: '白芍', r: '佐', c: '#4A6B8A' },
-        { n: '远志', r: '使', c: '#C9A050' },
-      ],
-      desc: '君药檀香温中理气，臣药柏木宁心安神，佐以白芍柔肝缓急，使药远志交通心肾。四药合伍，疏肝解郁、清心安神。',
-    })
+    if (recipe) {
+      addMsg({
+        type: 'recipe',
+        name: recipe.name,
+        effect: recipe.effect,
+        color: recipe.color,
+        image: recipe.image?.chat,
+        herbs: recipe.herbs.map(h => ({ n: h.n, r: h.r, c: { '君': '#4E2E1E', '臣': '#4A7C59', '佐': '#4A6B8A', '使': '#C9A050' }[h.r] })),
+        desc: recipe.principle,
+      })
+    }
     step.value = 6
   },
 
@@ -180,7 +216,9 @@ const offlineFlow = {
     scrollToBottom()
     await delay(1500)
     typing.value = false
-    addMsg({ type: 'ai', text: '感谢你的分享。香方会在3-5天内送到，使用一周后，记得回来告诉我你的感受 🪷\n\n我们可以根据你的变化来调整方案。' })
+    addMsg({ type: 'ai', text: '感谢你的分享。使用一周后，记得回来告诉我你的感受。\n\n我们可以根据你的变化来调整方案。' })
+    // 保存离线对话
+    saveCurrentChat()
   },
 
   async pleaseSelectEmotion() {
@@ -209,7 +247,56 @@ const handleEmotionSelect = (emotion, idx) => {
   )
   addMsg({ type: 'user', text: emotion.text })
   step.value = 3
-  offlineFlow.afterEmotion()
+
+  if (mode.value === 'offline') {
+    offlineFlow.afterEmotion(emotion.label)
+  } else {
+    // 在线模式也支持情绪选择
+    chatHistory.value.push({ role: 'user', content: emotion.text })
+    typing.value = true
+    scrollToBottom()
+
+    const aiMsg = { type: 'ai', text: '' }
+    messages.value.push(aiMsg)
+    const msgIdx = messages.value.length - 1
+
+    const userContext = buildUserContext()
+    sendMessage(
+      chatHistory.value,
+      userContext,
+      (chunk, full) => {
+        messages.value[msgIdx] = { ...messages.value[msgIdx], text: full.replace(/\[FiveElements:[^\]]+\]/g, '').replace(/\[Recipe:[^\]]+\]/g, '').trim() || full }
+        scrollToBottom()
+      },
+      (fiveEl) => {
+        messages.value.push({ type: 'fiveElements', elements: fiveEl.elements, desc: fiveEl.desc })
+        scrollToBottom()
+      },
+      (recipeName) => {
+        const recipe = products.find(p => p.name === recipeName)
+        if (recipe) {
+          messages.value.push({
+            type: 'recipe', name: recipe.name, effect: recipe.effect,
+            color: recipe.color, image: recipe.image?.chat,
+            herbs: recipe.herbs.map(h => ({ n: h.n, r: h.r, c: { '君': '#4E2E1E', '臣': '#4A7C59', '佐': '#4A6B8A', '使': '#C9A050' }[h.r] })),
+            desc: recipe.principle,
+          })
+          scrollToBottom()
+        }
+      }
+    ).then(result => {
+      chatHistory.value.push({ role: 'assistant', content: result.text })
+      step.value = 10
+      saveCurrentChat()
+    }).catch(() => {
+      messages.value.splice(msgIdx, 1)
+      mode.value = 'offline'
+      showToast('AI 暂时不可用，已切换为离线模式')
+      offlineFlow.afterEmotion(emotion.label)
+    }).finally(() => {
+      typing.value = false
+    })
+  }
 }
 
 const handleSend = async () => {
@@ -235,6 +322,9 @@ const handleSend = async () => {
 }
 
 const handleReset = () => {
+  // 先保存当前对话
+  saveCurrentChat()
+
   timers.forEach((t) => clearTimeout(t))
   timers.length = 0
   messages.value = []
@@ -242,23 +332,60 @@ const handleReset = () => {
   inputText.value = ''
   typing.value = false
   chatHistory.value = []
+  selectedEmotion = null
   initialized = false
   mode.value = 'online'
 
+  // 生成新对话 ID
+  conversationId.value = 'conv_' + Date.now()
+
   if (!initialized) {
     initialized = true
-    offlineFlow.welcome()
+    initOnlineMode()
   }
 }
 
-// 初始化
-onMounted(() => {
+// ==================== 初始化 ====================
+const initOnlineMode = () => {
+  const season = getCurrentSeason()
+  const greeting = getSeasonGreeting(season.season)
+  addMsg({ type: 'ai', text: `你好，我是你的AI配香助手。\n\n${greeting}\n\n请告诉我你最近的感受，我会为你分析体质并推荐最适合的香方。\n\n可以直接输入，也可以详细描述你的睡眠、情绪、身体状态。` })
+  step.value = 10
+}
+
+onMounted(async () => {
   if (!initialized) {
     initialized = true
+
+    // 检查是否有可恢复的对话
+    const latest = chatHistoryManager.loadLatestConversation()
+    if (latest && latest.messages.length > 1) {
+      try {
+        await showConfirmDialog({
+          title: '发现未完成的对话',
+          message: '检测到你上次有未聊完的话题，是否继续？',
+          confirmButtonText: '继续上次',
+          cancelButtonText: '重新开始',
+          closeOnClickOverlay: true,
+        })
+        // 用户选择继续
+        conversationId.value = latest.id
+        messages.value = latest.messages
+        chatHistory.value = latest.chatHistory
+        step.value = 10
+        scrollToBottom()
+        return
+      } catch {
+        // 用户选择重新开始
+      }
+    }
+
+    // 新对话
+    conversationId.value = 'conv_' + Date.now()
+
     // 先尝试在线模式，失败自动 fallback
     if (mode.value === 'online') {
-      addMsg({ type: 'ai', text: '你好，我是你的AI配香助手 🪷\n\n请告诉我你最近的感受，我会为你分析体质并推荐最适合的香方。\n\n可以直接输入，也可以详细描述你的睡眠、情绪、身体状态。' })
-      step.value = 10
+      initOnlineMode()
     } else {
       offlineFlow.welcome()
     }
@@ -270,7 +397,7 @@ onMounted(() => {
   <div class="chat-wrap">
     <!-- Header -->
     <div class="chat-header">
-      <h3 class="brand">🪷 AI 配香助手</h3>
+      <h3 class="brand">AI 配香助手</h3>
       <p>{{ mode === 'online' ? '以千年合香之方，调理今日之情志' : '离线模式' }}</p>
       <button class="chat-reset" @click="handleReset" title="重新开始">
         <svg viewBox="0 0 24 24" width="18" height="18" stroke="var(--t3)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">

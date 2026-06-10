@@ -28,17 +28,32 @@ export function useChatApi() {
     return match ? match[1] : null
   }
 
+  // 超长历史截断：保留开头 2 条 + 末尾 (max-4) 条，中间用摘要替代
+  const summarizeHistory = (chatHistory, max = 20) => {
+    if (chatHistory.length <= max) return chatHistory
+    const head = chatHistory.slice(0, 2)
+    const tail = chatHistory.slice(-(max - 3))
+    const summary = {
+      role: 'system',
+      content: '[前情摘要] 用户之前已与AI讨论过情绪和体质问题，AI已进行过五行分析和香方推荐。以下是最近的对话。'
+    }
+    return [...head, summary, ...tail]
+  }
+
   // 流式调用 DeepSeek API
-  const sendMessage = async (messages, onChunk, onFiveElements, onRecipe) => {
+  const sendMessage = async (messages, userContext, onChunk, onFiveElements, onRecipe) => {
     loading.value = true
     error.value = null
     let fullText = ''
 
     try {
+      // 截断过长历史
+      const trimmedMessages = summarizeHistory(messages)
+
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages: trimmedMessages, userContext }),
       })
 
       if (!res.ok) {
