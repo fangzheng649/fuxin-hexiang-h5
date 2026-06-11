@@ -1,17 +1,30 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showDialog } from 'vant'
 import { knowledgeList } from '../data/knowledge.js'
 import { videos } from '../data/videos.js'
 import { workshops } from '../data/workshops.js'
-import { communityPosts } from '../data/community.js'
+import { communityPosts as defaultPosts } from '../data/community.js'
 import CloudDivider from '../components/CloudDivider.vue'
 import SectionHeader from '../components/SectionHeader.vue'
 
 const router = useRouter()
 const communityTab = ref(0)
 const likedPosts = ref(new Set())
+
+// 社区帖子：合并默认数据 + 用户自建帖子
+const userPosts = ref(JSON.parse(localStorage.getItem('fuxin_user_posts') || '[]'))
+const allPosts = computed(() => [...userPosts.value, ...defaultPosts])
+
+// 用户评论：{ postId: [{ username, text, time }] }
+const userComments = ref(JSON.parse(localStorage.getItem('fuxin_comments') || '{}'))
+
+const getComments = (postId) => {
+  const mine = userComments.value[postId] || []
+  const defaultCount = defaultPosts.find(p => p.id === postId)?.comments || 0
+  return [...mine, ...Array(Math.max(0, defaultCount - mine.length)).fill(null)]
+}
 
 const toggleLike = (id) => {
   if (likedPosts.value.has(id)) {
@@ -45,9 +58,53 @@ const openKnowledge = (item) => {
 // 社区帖子详情
 const showPostDetail = ref(false)
 const selectedPost = ref(null)
+const newComment = ref('')
+
 const openPost = (post) => {
   selectedPost.value = post
+  newComment.value = ''
   showPostDetail.value = true
+}
+
+const submitComment = () => {
+  if (!newComment.value.trim() || !selectedPost.value) return
+  const postId = selectedPost.value.id
+  if (!userComments.value[postId]) userComments.value[postId] = []
+  userComments.value[postId].push({
+    username: '我',
+    text: newComment.value.trim(),
+    time: '刚刚',
+  })
+  localStorage.setItem('fuxin_comments', JSON.stringify(userComments.value))
+  newComment.value = ''
+  showToast('评论已发布')
+}
+
+// 社区发帖
+const showNewPost = ref(false)
+const newPostText = ref('')
+
+const openNewPost = () => {
+  newPostText.value = ''
+  showNewPost.value = true
+}
+
+const submitPost = () => {
+  if (!newPostText.value.trim()) return
+  const post = {
+    id: Date.now(),
+    username: '我',
+    avatar: { bg: '#D4C5B0', emoji: '📝' },
+    time: '刚刚',
+    text: newPostText.value.trim(),
+    recipe: null,
+    likes: 0,
+    comments: 0,
+  }
+  userPosts.value.unshift(post)
+  localStorage.setItem('fuxin_user_posts', JSON.stringify(userPosts.value))
+  showNewPost.value = false
+  showToast('发布成功')
 }
 
 const knowledgeIcons = {
@@ -95,7 +152,7 @@ const knowledgeIcons = {
     <!-- Videos -->
     <SectionHeader title="制香学堂" more="全部 ›" to="/heritage/videos" />
     <div class="video-scroll hide-scrollbar">
-      <div v-for="video in videos" :key="video.id" class="video-card" @click="showToast('视频播放功能即将推出')">
+      <router-link v-for="video in videos" :key="video.id" class="video-card" :to="`/heritage/video/${video.id}`">
         <div class="video-thumb" :style="{ background: video.thumb }">
           <img v-if="video.image" :src="video.image" :alt="video.title"
             @error="$event.target.style.display='none'" loading="lazy" />
@@ -106,7 +163,7 @@ const knowledgeIcons = {
           <div class="video-title">{{ video.title }}</div>
           <div class="video-views">{{ video.views }}次播放</div>
         </div>
-      </div>
+      </router-link>
     </div>
 
     <CloudDivider />
@@ -150,7 +207,7 @@ const knowledgeIcons = {
     <CloudDivider />
 
     <!-- Community -->
-    <SectionHeader title="香气社区" more="发布 ›" @more="showToast('社区发帖功能即将推出')" />
+    <SectionHeader title="香气社区" more="发布 ›" @more="openNewPost" />
     <div class="community-tabs">
       <div
         v-for="(tab, i) in ['最新', '热门', '精华']"
@@ -163,7 +220,7 @@ const knowledgeIcons = {
       </div>
     </div>
     <div class="community-list">
-      <div v-for="post in communityPosts" :key="post.id" class="community-post" @click="openPost(post)">
+      <div v-for="post in allPosts" :key="post.id" class="community-post" @click="openPost(post)">
         <div class="community-user">
           <div class="community-avatar" :style="{ background: post.avatar.bg }">
             {{ post.avatar.emoji }}
@@ -219,11 +276,34 @@ const knowledgeIcons = {
         <span v-if="selectedPost.recipe" class="community-recipe-tag">{{ selectedPost.recipe }}</span>
         <div class="post-detail-stats">
           <span>❤️ {{ selectedPost.likes }} 喜欢</span>
-          <span>💬 {{ selectedPost.comments }} 评论</span>
+          <span>💬 {{ (userComments[selectedPost.id] || []).length + selectedPost.comments }} 评论</span>
         </div>
         <div class="post-detail-comments">
-          <div class="post-detail-comment-placeholder">评论区功能即将推出</div>
+          <div v-if="userComments[selectedPost.id]?.length" class="comment-list">
+            <div v-for="(c, i) in userComments[selectedPost.id]" :key="i" class="comment-item">
+              <span class="comment-name">{{ c.username }}</span>
+              <span class="comment-text">{{ c.text }}</span>
+              <span class="comment-time">{{ c.time }}</span>
+            </div>
+          </div>
+          <div v-else class="comment-empty">暂无评论，来说点什么吧</div>
         </div>
+        <div class="comment-input-bar">
+          <input v-model="newComment" placeholder="写下你的想法..." class="comment-input" @keyup.enter="submitComment" />
+          <button class="comment-send" @click="submitComment">发送</button>
+        </div>
+      </div>
+    </van-popup>
+
+    <!-- New Post Popup -->
+    <van-popup v-model:show="showNewPost" position="bottom" round :style="{ maxHeight: '60vh' }">
+      <div class="new-post-popup">
+        <div class="new-post-header">
+          <span class="brand">发布动态</span>
+          <button class="new-post-close" @click="showNewPost = false">✕</button>
+        </div>
+        <textarea v-model="newPostText" class="new-post-textarea" placeholder="分享你的用香体验、心得感悟..." rows="5"></textarea>
+        <button class="btn-primary" @click="submitPost">发布</button>
       </div>
     </van-popup>
   </div>
@@ -617,8 +697,51 @@ const knowledgeIcons = {
   display: flex; gap: 20px; font-size: 12px; color: var(--t3);
   padding: 12px 0; border-top: 1px solid var(--mg); margin-top: 8px;
 }
-.post-detail-comments { margin-top: 12px; }
-.post-detail-comment-placeholder {
-  text-align: center; font-size: 12px; color: var(--t3); padding: 20px 0;
+.post-detail-comments { margin-top: 12px; max-height: 200px; overflow-y: auto; }
+.comment-empty { text-align: center; font-size: 12px; color: var(--t3); padding: 16px 0; }
+.comment-list { display: flex; flex-direction: column; gap: 10px; }
+.comment-item {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px;
+  padding: 8px 10px; background: var(--rp); border-radius: 10px;
 }
+.comment-name { font-size: 12px; font-weight: 500; color: var(--tp); }
+.comment-text { font-size: 12px; color: var(--t2); flex: 1; line-height: 1.5; }
+.comment-time { font-size: 10px; color: var(--t3); }
+.comment-input-bar {
+  display: flex; gap: 8px; margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--mg);
+}
+.comment-input {
+  flex: 1; padding: 8px 14px; border: 1px solid var(--mg); border-radius: 20px;
+  font-size: 13px; background: var(--rp); color: var(--t1); outline: none;
+  font-family: inherit;
+}
+.comment-input:focus { border-color: var(--tl); }
+.comment-send {
+  padding: 8px 16px; background: var(--tp); color: white; border: none;
+  border-radius: 20px; font-size: 12px; cursor: pointer; font-family: inherit;
+}
+
+/* New Post Popup */
+.new-post-popup { padding: 20px; }
+.new-post-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+}
+.new-post-header span { font-size: 16px; font-weight: 600; color: var(--t1); }
+.new-post-close {
+  width: 28px; height: 28px; border: none; background: var(--rp);
+  border-radius: 50%; font-size: 14px; color: var(--t3); cursor: pointer;
+}
+.new-post-textarea {
+  width: 100%; padding: 12px; border: 1px solid var(--mg); border-radius: 12px;
+  font-size: 14px; color: var(--t1); background: var(--rp); outline: none;
+  font-family: inherit; resize: none; line-height: 1.6; margin-bottom: 12px;
+}
+.new-post-textarea:focus { border-color: var(--tl); }
+.btn-primary {
+  width: 100%; padding: 12px; background: var(--tp); color: white;
+  border: none; border-radius: 12px; font-size: 14px; cursor: pointer;
+  font-family: 'Noto Serif SC', serif; font-weight: 600; letter-spacing: 2px;
+}
+.btn-primary:active { background: var(--td); }
 </style>

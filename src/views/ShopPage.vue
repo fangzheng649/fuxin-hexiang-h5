@@ -82,7 +82,7 @@ const handleSubscribe = () => {
     confirmButtonText: '立即订阅',
     cancelButtonText: '再想想',
   }).then(() => {
-    showToast('订阅功能即将上线')
+    showToast('已记录您的订阅意向，上线后将第一时间通知您')
   }).catch(() => {})
 }
 </script>
@@ -158,7 +158,7 @@ const handleSubscribe = () => {
     <CloudDivider />
 
     <!-- Gift -->
-    <SectionHeader title="香礼 · 赠礼优选" more="更多 ›" @more="showToast('更多香礼即将推出')" />
+    <SectionHeader title="香礼 · 赠礼优选" more="更多 ›" @more="showToast('更多香礼筹备中，敬请期待')" />
     <div class="gift-scroll hide-scrollbar">
       <div v-for="gift in gifts" :key="gift.name" class="gift-card" @click="openGift(gift)">
         <div class="gift-card-image" :style="{ background: gift.color }">
@@ -190,7 +190,7 @@ const handleSubscribe = () => {
           <div class="gift-detail-desc">
             精选上等药材，传承人手工调配，精美礼盒包装。适合送礼或自用，传递一份来自千年非遗的温暖心意。
           </div>
-          <button class="btn-primary" @click="showGiftDetail = false; showToast('礼盒功能即将上线')">了解详情</button>
+          <button class="btn-primary" @click="showGiftDetail = false; showToast('已记录您的意向，客服将尽快联系您')">了解详情</button>
         </div>
       </div>
     </van-popup>
